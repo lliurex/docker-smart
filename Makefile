@@ -19,7 +19,7 @@ CONTAINER_LIST := $(shell docker ps -a -q)
 
 run : .build
 	@echo Running
-	docker run $(RUNOPTS) $(VIDEO_OPTS) --name test-$(VERSION) $(TAG)
+	docker run $(RUNOPTS) $(VIDEO_OPTS) --name test-$(VERSION) $(TAG) bash -c '/opt/lliurex-smart/smart-product-drivers/SMARTBoardService & /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMART\ Board\ Tools_elf'
 	touch .run
 
 clean_images :
