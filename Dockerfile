@@ -9,4 +9,5 @@ RUN apt-get install grep python -y
 RUN mkdir /usr/share/applications -p && mkdir /usr/share/desktop-directories -p
 RUN apt-get install lliurex-smart64 -y
 WORKDIR /opt/lliurex-smart/smart-product-drivers
-CMD ["bash"]
+#CMD ["bash"]
+CMD [ "bash -c 'SMARTBoardService & /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMART\ Board\ Tools_elf' " ]
