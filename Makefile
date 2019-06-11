@@ -19,7 +19,7 @@ CONTAINER_LIST := $(shell docker ps -a -q)
 
 run : .build
 	@echo Running
-	docker run $(RUNOPTS) $(VIDEO_OPTS) --name test-$(VERSION) $(TAG) bash
+	docker run $(RUNOPTS) $(VIDEO_OPTS) --name test-$(VERSION) $(TAG)
 	touch .run
 
 clean_images :
