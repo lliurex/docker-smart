@@ -1,10 +1,11 @@
 VERSION := lliurex
-TAGVERSION := 0.1
+TAGVERSION := 1.0
 TAG := $(subst __COLON__,:,$(VERSION)__COLON__$(TAGVERSION))
 VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0" --device /dev/dri/card0)
 #VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0")
 #RUNOPTS := --rm -ti --privileged
 RUNOPTS := --rm --privileged -d
+#REPO := $(subst __COLON__,:,http__COLON__//172.20.8.6/llx16-debmirror)
 
 IMAGE_LIST := $(shell docker images -q)
 CONTAINER_LIST := $(shell docker ps -a -q)
@@ -14,12 +15,16 @@ CONTAINER_LIST := $(shell docker ps -a -q)
 
 .build : 
 	@echo Building
-	docker build --rm --tag $(TAG) -f Dockerfile .
+ifneq ($(strip $(REPO)),)
+	docker build --rm --tag $(TAG) --build-arg REPO=$(REPO) -f Dockerfile .
+else
+	docker build --rm --tag $(TAG) -f Dockerfile . 
+endif
 	touch .build
 
 run : .build
 	@echo Running
-	docker run $(RUNOPTS) $(VIDEO_OPTS) --name test-$(VERSION) $(TAG) bash -c '/opt/lliurex-smart/smart-product-drivers/SMARTBoardService & /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMART\ Board\ Tools_elf'
+	docker run $(RUNOPTS) $(VIDEO_OPTS) $(TAG)
 	touch .run
 
 clean_images :
