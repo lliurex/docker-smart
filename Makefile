@@ -1,5 +1,5 @@
 VERSION := lliurex
-TAGVERSION := 1.0
+TAGVERSION := 2.0
 TAG := $(subst __COLON__,:,$(VERSION)__COLON__$(TAGVERSION))
 VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0" --device /dev/dri/card0)
 #VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0")
@@ -16,9 +16,9 @@ CONTAINER_LIST := $(shell docker ps -a -q)
 .build : 
 	@echo Building
 ifneq ($(strip $(REPO)),)
-	docker build --rm --tag $(TAG) --build-arg REPO=$(REPO) -f Dockerfile .
+	docker build --rm=false --tag $(TAG) --build-arg REPO=$(REPO) -f Dockerfile .
 else
-	docker build --rm --tag $(TAG) -f Dockerfile . 
+	docker build --rm=false --tag $(TAG) -f Dockerfile . 
 endif
 	touch .build
 
