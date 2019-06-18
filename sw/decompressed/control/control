@@ -1,0 +1,13 @@
+Package: nwfermi
+Version: 0.6.5.1
+Section: misc 
+Priority: optional
+Architecture: amd64
+Depends: make, sed (>> 3.0), dkms, linux-libc-dev, libc6-dev, linux-headers-generic | linux-headers, patch
+Installed-Size: 504
+Maintainer: Daniel Newton <dnewton@nextwindow.com>
+Provides: nwfermi
+Description: Driver NextWindow Fermi para pizarras SMART.
+ Funciona con las pizarras SMART basadas en
+ hardware NextWindow Fermi como la SMART 480DViT
+ y las NextWindow 1950/3000 Touch Screens.

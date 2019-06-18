@@ -1,5 +1,5 @@
 VERSION := lliurex
-TAGVERSION := 2.0
+TAGVERSION := 3.0
 TAG := $(subst __COLON__,:,$(VERSION)__COLON__$(TAGVERSION))
 VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0" --device /dev/dri/card0)
 #VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0")

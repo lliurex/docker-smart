@@ -1,0 +1,12 @@
+394713cabbec62e0c638bdb9db326d22  lib/udev/rules.d/40-nw-fermi.rules
+6e1df2ae96c9afa4cdcc183c5e73ce6f  lib/systemd/system/nwfermi_module_dkms_updater.service
+4e698452f0750d248fa09f05e1dc4eff  lib/systemd/system/nwfermi@.service
+b4874326ed8f9a5bbb801c8485cdc343  usr/src/nwfermi-0.6.5.1/dkms.conf
+26641435133d12fe56c88a22e6cd0ddb  usr/src/nwfermi-0.6.5.1/nw-fermi.c
+895ccccb420122d0341491a3900fd29f  usr/src/nwfermi-0.6.5.1/nwfermi_public.h
+d454a1f4c928868a3385781b5601fffb  usr/src/nwfermi-0.6.5.1/Makefile
+3b9533019273f8af74c04c0b03724691  usr/share/doc/nwfermi/copyright
+47fdbf4868622c24a860a3e731bcef8a  usr/share/doc/nwfermi/changelog.gz
+3e8b272a16b4354964c112eae9fcb116  usr/sbin/nwfermi_daemon
+0ab8e32d1a00bd9ef210e8e0fbce452b  usr/sbin/nwfermi_daemon.sh
+17bc5622eeca36dbb2527276f3184eff  usr/sbin/nwfermi_module_dkms_updater

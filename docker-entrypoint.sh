@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 SERVICES="SMARTBoardService;dbus-uuidgen --ensure;dbus-daemon --system --fork;pulseaudio --system --daemonize --high-priority --log-target=syslog --disallow-exit --disallow-module-loading=1"
+bash /usr/sbin/nwfermi_daemon.sh
+sleep 2
 IFS=';'
 for s in $SERVICES; do
     echo $s

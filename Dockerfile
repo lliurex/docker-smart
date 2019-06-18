@@ -12,4 +12,5 @@ RUN apt-get install dbus dbus-x11 pulseaudio gstreamer0.10 alsa-utils -y && apt-
 RUN install -d -m755 -o pulse -g pulse /run/pulse
 RUN mkdir /var/run/dbus && chown messagebus:messagebus /var/run/dbus/
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+COPY ./sw/decompressed/data/usr/sbin/nwfermi_daemon* /usr/sbin/
 ENTRYPOINT [ "/docker-entrypoint.sh" ]
