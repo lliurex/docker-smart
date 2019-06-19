@@ -21,6 +21,8 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+PKGVER=`dpkg-query -W -f='${Version}' nwfermi-module | awk -F "-" '{print $1}'`
+PKGVER=${PKGVER#*:}
 
 case "$1" in
     remove|upgrade|deconfigure)
