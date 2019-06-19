@@ -10,6 +10,6 @@ Homepage: <insert the upstream URL, if relevant>
 
 Package: nwfermi-module
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Depends: ${shlibs:Depends}, ${misc:Depends}, init-system-helpers, dkms
+Description: nwfermi module for smart-board 480 
+ nwfermi standalone module (without usermode binary) intended to use with docker image
