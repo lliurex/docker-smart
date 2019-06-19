@@ -50,7 +50,7 @@ case "$1" in
 		fi
 		
 		echo "Removing all DKMS Modules"
-		dkms remove -m nwfermi -v $PKGVER --all -q > /dev/null
+		dkms remove -m nwfermi -v $PKGVER --all -q > /dev/null || true
 		echo "Done."
 		echo "Adding Module to DKMS build system"
 		echo "driver version= $PKGVER"
