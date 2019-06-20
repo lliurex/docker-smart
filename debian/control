@@ -1,5 +1,5 @@
 Source: nwfermi-module
-Section: unknown
+Section: utils
 Priority: optional
 Maintainer: M.Angel Juan <m.angel.juan@gmail.com>
 Build-Depends: debhelper (>= 10), init-system-helpers
