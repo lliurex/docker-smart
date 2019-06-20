@@ -1,2 +1,2 @@
-daemon/nwfermi_module usr/bin/nwfermi_module
-daemon/nwfermi_module.sh usr/bin/nwfermi_module.sh
+daemon/nwfermi_daemon usr/bin/
+daemon/nwfermi_daemon.sh usr/bin/
