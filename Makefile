@@ -1,5 +1,5 @@
-VERSION := lliurex
-TAGVERSION := 3.0
+VERSION := lliurex-smart
+TAGVERSION := 2.1
 TAG := $(subst __COLON__,:,$(VERSION)__COLON__$(TAGVERSION))
 VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0" --device /dev/dri/card0)
 #VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0")
@@ -21,6 +21,11 @@ else
 	docker build --rm=false --tag $(TAG) -f Dockerfile . 
 endif
 	touch .build
+
+build_latest:
+	@echo Building latest
+	docker build --rm=false --tag $(VERSION) -f Dockerfile-latest .
+	@echo DONE! Image tagged as '$(VERSION)'
 
 run : .build
 	@echo Running
