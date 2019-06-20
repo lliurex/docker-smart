@@ -1,3 +1,9 @@
+nwfermi-module (0.6.5.1-0+lliurex2) bionic; urgency=medium
+
+  * Make multi-package
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Thu, 20 Jun 2019 14:28:11 +0200
+
 nwfermi-module (0.6.5.1-0+lliurex) bionic; urgency=medium
 
   * Initial Release.
