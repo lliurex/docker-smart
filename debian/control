@@ -13,3 +13,9 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, init-system-helpers, dkms
 Description: nwfermi module for smart-board 480 
  nwfermi standalone module (without usermode binary) intended to use with docker image
+
+Package: nwfermi-daemon
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: nwfermi module for smart-board 480 
+ nwfermi daemon binary intended to use with docker image

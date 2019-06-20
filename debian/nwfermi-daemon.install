@@ -1,0 +1,2 @@
+daemon/nwfermi_module usr/bin/nwfermi_module
+daemon/nwfermi_module.sh usr/bin/nwfermi_module.sh
