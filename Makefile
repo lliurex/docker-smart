@@ -25,7 +25,9 @@ endif
 build_latest:
 	@echo Building latest
 	docker build --rm=false --tag $(VERSION) -f Dockerfile-latest .
-	@echo DONE! Image tagged as '$(VERSION)'
+	docker rmi mijunalo/lliurex-smart
+	docker tag $(VERSION) mijunalo/lliurex-smart
+	@echo DONE! Image tagged as '$(VERSION)' and mijunalo/lliurex-smart
 
 run : .build
 	@echo Running
