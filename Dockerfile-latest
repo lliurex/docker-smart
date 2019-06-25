@@ -1,4 +1,4 @@
-FROM mijunalo/lliurex-smart:2.1
+FROM lliurex/lliurex-smart:1.0
 MAINTAINER M.Angel Juan <m.angel.juan@gmail.com>
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 ENTRYPOINT [ "/docker-entrypoint.sh" ]

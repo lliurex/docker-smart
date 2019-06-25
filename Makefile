@@ -1,5 +1,5 @@
 VERSION := lliurex-smart
-TAGVERSION := 2.1
+TAGVERSION := 1.0
 TAG := $(subst __COLON__,:,$(VERSION)__COLON__$(TAGVERSION))
 VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0" --device /dev/dri/card0)
 #VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DISPLAY="__COLON__0")
@@ -25,9 +25,9 @@ endif
 build_latest:
 	@echo Building latest
 	docker build --rm=false --tag $(VERSION) -f Dockerfile-latest .
-	docker rmi mijunalo/lliurex-smart
-	docker tag $(VERSION) mijunalo/lliurex-smart
-	@echo DONE! Image tagged as '$(VERSION)' and mijunalo/lliurex-smart
+	docker rmi lliurex/lliurex-smart
+	docker tag $(VERSION) lliurex/lliurex-smart
+	@echo DONE! Image tagged as '$(VERSION)' and lliurex/lliurex-smart
 
 run : .build
 	@echo Running
