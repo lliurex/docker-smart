@@ -3,6 +3,19 @@
 import os
 import sys
 import subprocess
+import logging
+import argparse
+
+IMAGE_NAME='lliurex/lliurex-smart:latest'
+CONTAINER_NAME='test-smart'
+
+DEBUG=True
+if (DEBUG):
+	logging.basicConfig(level=logging.DEBUG)
+else:
+	logging.basicConfig(level=logging.INFO)
+
+DOCKER_IS_INSTALLED=False
 
 def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newlines=True):
 	command=list()
@@ -13,7 +26,13 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 	else:
 		raise ValueError("Wrong parameter passed to execute method, error is: '{}'".format(cmd))
 	try:
-		output = subprocess.check_output(command,shell=shell,stderr=stderr,universal_newlines=universal_newlines)
+		
+		logging.debug("Executing {}".format(cmd))
+		custom_env = os.environ.copy()
+		custom_env["LANG"] = "en"
+		custom_env["LANGUAGE"] = "en"
+		custom_env["LC_ALL"] = "en.UTF-8"
+		output = subprocess.check_output(command,shell=shell,stderr=stderr,universal_newlines=universal_newlines,env=custom_env)
 		retcode = 0
 	except subprocess.CalledProcessError as e:
 		retcode = getattr(e,"returncode",None)
@@ -22,7 +41,10 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 		retcode = None
 		output = None
 		raise RuntimeError("Error calling subprocess, error is: '{}'".format(e))
+	logging.debug("Command return: '{}' with output '{}'".format(retcode,output.strip()))
 	if stdout:
+		if output:
+			output = output.strip()
 		return (retcode, output)
 	else:
 		if retcode == 0:
@@ -30,6 +52,128 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 		else:
 			return False
 
+def docker_installed():
+	global DOCKER_IS_INSTALLED
+	
+	installed = False
+	if not DOCKER_IS_INSTALLED:
+		installed = execute('docker -v',False)
+	else:
+		installed = True
+
+	if installed:
+		DOCKER_IS_INSTALLED=True
+	else:
+		DOCKER_IS_INSTALLED=False
+	
+	logging.debug("DOCKER_IS_INSTALLED={}".format(DOCKER_IS_INSTALLED))
+	return DOCKER_IS_INSTALLED
+
+def image_available():
+	global IMAGE_NAME
+
+	if not docker_installed():
+		return False
+	ret,out = execute('docker images -a -q ' + IMAGE_NAME)
+	if out and len(out) == 12:
+		return True
+	else:
+		return False
+
+def remove_image():
+	global IMAGE_NAME
+
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	ret = execute('docker rmi ' + IMAGE_NAME, False)
+	if not image_available():
+		return True
+	else:
+		raise SystemError("Error removing image")
+
+def get_image():
+	global IMAGE_NAME
+
+	if not docker_installed():
+		raise OSError("docker is not installed")
+	return execute('docker pull ' + IMAGE_NAME, False)
+
+def container_available():
+	global IMAGE_NAME, CONTAINER_NAME
+
+	if not docker_installed():
+		return False
+	ret,out = execute('docker ps -a -q  -f name=' + CONTAINER_NAME + ' -f ancestor=' + IMAGE_NAME)
+	if out and len(out) == 12:
+		return True
+	else:
+		return False
+
+def get_container():
+	global IMAGE_NAME, CONTAINER_NAME
+
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	
+	cmdline=['docker run']
+	cmdline.append('-d')
+	cmdline.append('--privileged')
+	cmdline.append('-v /tmp/.X11-unix:/tmp/.X11-unix')
+	cmdline.append('-e DISPLAY=":0"')
+	cmdline.append('--name ' + CONTAINER_NAME)
+	
+	cmdline = ' '.join(cmdline)
+	cmdline += ' ' + IMAGE_NAME
+	ret = execute(cmdline,False)
+	return ret
+
+def run_container():
+	global CONTAINER_NAME
+
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	ret = execute('docker start ' +  CONTAINER_NAME)
+	return ret
+
+def start_software():
+	try:
+		if not get_x_permission():
+			print("Can't get X permission, aborting")
+			return False
+		if container_available():
+			run_container()
+		else:
+			if not image_available():
+				get_image()
+			get_container()
+	except Exception as e:
+		import traceback
+		print(traceback.format_exc())
+		print("Starting software failed, error is: '{}'".format(e))
+
+def get_x_permission():
+	n = 2
+	while n > 0:
+		ret, out = execute('xhost')
+		if 'si:localuser:root' in out.lower():
+			return True
+		else:
+			execute('xhost +SI:localuser:root',False)
+			n=n-1
+	return False
+			
+def remove_x_permission():
+	n = 2
+	while n > 0:
+		ret, out = execute('xhost')
+		if 'si:localuser:root' not in out.lower():
+			return True
+		else:
+			execute('xhost -SI:localuser:root',False)
+			n=n-1
+	return False		
+		
+
 if __name__ == '__main__':
-	print(execute('docker -v'))
+	print(start_software())
 	
