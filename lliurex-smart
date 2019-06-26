@@ -1,1 +1,35 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+import os
+import sys
+import subprocess
+
+def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newlines=True):
+	command=list()
+	if isinstance(cmd,str):
+		command.extend(cmd.split())
+	elif isinstance(cmd,list):
+		command.extend(cmd)
+	else:
+		raise ValueError("Wrong parameter passed to execute method, error is: '{}'".format(cmd))
+	try:
+		output = subprocess.check_output(command,shell=shell,stderr=stderr,universal_newlines=universal_newlines)
+		retcode = 0
+	except subprocess.CalledProcessError as e:
+		retcode = getattr(e,"returncode",None)
+		output = getattr(e,"output",None)
+	except Exception as e:
+		retcode = None
+		output = None
+		raise RuntimeError("Error calling subprocess, error is: '{}'".format(e))
+	if stdout:
+		return (retcode, output)
+	else:
+		if retcode == 0:
+			return True
+		else:
+			return False
+
+if __name__ == '__main__':
+	print(execute('docker -v'))
+	
