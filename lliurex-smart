@@ -289,7 +289,6 @@ def get_x_permission():
 	n = 2
 	while n > 0:
 		ret, out = execute('xhost')
-		n=n-1
 		if 'access control disabled' in out.lower():
 			return True
 		else:
