@@ -5,6 +5,8 @@ import sys
 import subprocess
 import logging
 import argparse
+import time
+import threading
 
 IMAGE_NAME='lliurex/lliurex-smart:latest'
 CONTAINER_NAME='test-smart'
@@ -15,7 +17,14 @@ if (DEBUG):
 else:
 	logging.basicConfig(level=logging.INFO)
 
+
+MAX_THREAD_POOL=2
+THREAD_POOL=[None]*MAX_THREAD_POOL
 DOCKER_IS_INSTALLED=False
+
+import json
+def print_dic(obj):
+	return json.dumps(obj,indent=4,sort_keys=True)
 
 def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newlines=True):
 	command=list()
@@ -26,12 +35,14 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 	else:
 		raise ValueError("Wrong parameter passed to execute method, error is: '{}'".format(cmd))
 	try:
-		
-		logging.debug("Executing {}".format(cmd))
 		custom_env = os.environ.copy()
 		custom_env["LANG"] = "en"
 		custom_env["LANGUAGE"] = "en"
 		custom_env["LC_ALL"] = "en.UTF-8"
+		#logging.debug(print_dic(custom_env))
+		if 'docker' in command[0]:
+			command.insert(0,'pkexec')			
+		logging.debug("Executing {}".format(command))
 		output = subprocess.check_output(command,shell=shell,stderr=stderr,universal_newlines=universal_newlines,env=custom_env)
 		retcode = 0
 	except subprocess.CalledProcessError as e:
@@ -66,7 +77,7 @@ def docker_installed():
 	else:
 		DOCKER_IS_INSTALLED=False
 	
-	logging.debug("DOCKER_IS_INSTALLED={}".format(DOCKER_IS_INSTALLED))
+	#logging.debug("DOCKER_IS_INSTALLED={}".format(DOCKER_IS_INSTALLED))
 	return DOCKER_IS_INSTALLED
 
 def image_available():
@@ -76,8 +87,10 @@ def image_available():
 		return False
 	ret,out = execute('docker images -a -q ' + IMAGE_NAME)
 	if out and len(out) == 12:
+		logging.info('Image available')
 		return True
 	else:
+		logging.info('Image not available')
 		return False
 
 def remove_image():
@@ -103,10 +116,12 @@ def container_available():
 
 	if not docker_installed():
 		return False
-	ret,out = execute('docker ps -a -q  -f name=' + CONTAINER_NAME + ' -f ancestor=' + IMAGE_NAME)
+	ret,out = execute('docker ps -a -q  -f=name=' + CONTAINER_NAME + ' -f=ancestor=' + IMAGE_NAME)
 	if out and len(out) == 12:
+		logging.info('Container is available')
 		return True
 	else:
+		logging.info('Container is not available')
 		return False
 
 def get_container():
@@ -119,7 +134,7 @@ def get_container():
 	cmdline.append('-d')
 	cmdline.append('--privileged')
 	cmdline.append('-v /tmp/.X11-unix:/tmp/.X11-unix')
-	cmdline.append('-e DISPLAY=":0"')
+	cmdline.append('-e DISPLAY=:0')
 	cmdline.append('--name ' + CONTAINER_NAME)
 	
 	cmdline = ' '.join(cmdline)
@@ -132,33 +147,153 @@ def run_container():
 
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	ret = execute('docker start ' +  CONTAINER_NAME)
+	ret = execute('docker start ' +  CONTAINER_NAME, shell=False)
 	return ret
+	
+def container_running():
+	global CONTAINER_NAME
+
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	if not container_available():
+		return False
+	ret, out = execute('docker ps -a -f=name='+CONTAINER_NAME+' --format {{.Status}}')
+	wrong_status = ['dead','removing','exited']
+	if out:
+		status = out.split()[0] or None
+		if not status:
+			raise SystemError("Error checking container_running")
+		status = status.lower()
+		if status in wrong_status:
+			return False
+		else:
+			return True
+	
+def remove_container():
+	global CONTAINER_NAME
+
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	if container_available():
+		if container_running():
+			stop_container()
+		ret, out = execute('docker rm '+CONTAINER_NAME)
+		if ret == 0:
+			return True
+		else:
+			return False
+	return True
+
+def stop_container():
+	global CONTAINER_NAME
+
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	if container_running():
+		stop_container()
+	ret, out = execute('docker stop '+CONTAINER_NAME)
+	if ret == 0:
+		return True
+	else:
+		return False
+
+def get_logs():
+	global CONTAINER_NAME
+	
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	if not container_available():
+		return False
+	else:
+		ret,out = execute('docker logs {} --since 2m'.format(CONTAINER_NAME),stderr=subprocess.STDOUT)
+		if ret == 0:
+			return out
+def print_logs():
+	pass
+	#print(get_logs())
+
+def check_logs():
+	output = get_logs()
+	if not output or "cannot connect to X server" in output:
+		logging.critical("Execution Failed")
+		remove_container()
+	else:
+		logging.info("Execution Succeded")
+
+def get_threads_size():
+	global THREAD_POOL
+	return len([t for t in THREAD_POOL if t is not None])
+
+def get_threads_pool_position():
+	global THREAD_POOL, MAX_THREAD_POOL
+	for i in [ x for x in range(0,MAX_THREAD_POOL) if THREAD_POOL[x] is None ]:
+		return i
+	return None
+	
+def get_thread_object(fn):
+	pass
+	
+def join_all_threads():
+	global THREAD_POOL, MAX_THREAD_POOL
+	max_iter = 10
+	while get_threads_size() > 0 and max_iter > 0:
+		max_iter = max_iter - 1
+		for i in range(0,MAX_THREAD_POOL):
+			if THREAD_POOL[i] is not None and THREAD_POOL[i].is_alive() != True:
+				THREAD_POOL[i] = None
+		for i in [ x for x in range(0,MAX_THREAD_POOL) if THREAD_POOL[x] is not None ]:
+			THREAD_POOL[i].join(1)
+	return True
+
+def create_timer(fn,timer):
+	global THREAD_POOL, MAX_THREAD_POOL
+	
+	timer = float(timer)
+	
+	if get_threads_size() > MAX_THREAD_POOL:
+		logging.warning('Max threads reached, unable to allocate in pool')
+		return None
+	
+	t = get_threads_pool_position()
+	logging.debug("Creating timer on {}".format(t))
+	if t is not None:
+		THREAD_POOL[t] = threading.Timer(timer,fn)
+		THREAD_POOL[t].start()
+		return t
+	return None
 
 def start_software():
 	try:
 		if not get_x_permission():
-			print("Can't get X permission, aborting")
+			logging.critical("Can't get X permission, aborting")
 			return False
-		if container_available():
-			run_container()
-		else:
-			if not image_available():
-				get_image()
-			get_container()
+		if not container_running():
+			if container_available():
+				run_container()
+			else:
+				if not image_available():
+					get_image()
+				get_container()
+		
+			if create_timer(check_logs,3) is None:
+				logging.warning("Couldn't create log watch timer")
+		return True
+		
 	except Exception as e:
 		import traceback
-		print(traceback.format_exc())
-		print("Starting software failed, error is: '{}'".format(e))
+		logging.debug(traceback.format_exc())
+		logging.debug("Starting software failed, error is: '{}'".format(e))
+		return False
 
 def get_x_permission():
 	n = 2
 	while n > 0:
 		ret, out = execute('xhost')
-		if 'si:localuser:root' in out.lower():
+		n=n-1
+		if 'access control disabled' in out.lower():
 			return True
 		else:
-			execute('xhost +SI:localuser:root',False)
+			execute('xhost +',False)
 			n=n-1
 	return False
 			
@@ -166,14 +301,16 @@ def remove_x_permission():
 	n = 2
 	while n > 0:
 		ret, out = execute('xhost')
-		if 'si:localuser:root' not in out.lower():
+		if 'access control enabled' not in out.lower():
 			return True
 		else:
-			execute('xhost -SI:localuser:root',False)
+			execute('xhost -',False)
 			n=n-1
 	return False		
 		
 
 if __name__ == '__main__':
-	print(start_software())
+	result = start_software()
+	join_all_threads()
+	print('Exitting')
 	
