@@ -3,15 +3,15 @@
  "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <action id="net.lliurex.lliurex-smart.launcher">
-    <message gettext-domain="lliurex-smart">Authentication is required to run /usr/bin/docker</message>
+  <action id="net.lliurex.docker.launcher">
+    <message gettext-domain="lliurex-docker">Authentication is required to run /usr/bin/docker</message>
     <icon_name>docker</icon_name>
     <defaults>
       <allow_any>auth_self_keep</allow_any>
       <allow_inactive>auth_self_keep</allow_inactive>
       <allow_active>auth_self_keep</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/home/lliurex/docker-smart/lliurex-smart</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/docker</annotate>
     <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
   </action>
 </policyconfig>

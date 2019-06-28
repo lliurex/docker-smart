@@ -2,8 +2,10 @@
 
 import os
 import sys
+import pwd
 import subprocess
-import logging
+import logging as _logging
+import logging.handlers as _handlers
 import argparse
 import time
 import threading
@@ -11,12 +13,26 @@ import threading
 IMAGE_NAME='lliurex/lliurex-smart:latest'
 CONTAINER_NAME='test-smart'
 
-DEBUG=True
-if (DEBUG):
-	logging.basicConfig(level=logging.DEBUG)
-else:
-	logging.basicConfig(level=logging.INFO)
+DEBUG=0
 
+################# END EDITABLE VARS ##################
+
+def check_running_user():
+	uid=os.geteuid()
+	return (uid,pwd.getpwuid(uid).pw_name)
+	
+current_uid,current_username = check_running_user()
+LOGFORMAT='lliurex-smart as [{}({})] %(levelname)s %(message)s'.format(current_username,current_uid)
+if (DEBUG):
+	_logging.basicConfig(level=_logging.DEBUG,format=LOGFORMAT)
+else:
+	#_logging.basicConfig(level=_logging.WARNING,format=LOGFORMAT)
+	_logging.basicConfig(level=_logging.INFO,format=LOGFORMAT)
+	
+logging = _logging.getLogger()
+_syslog_handler = _handlers.SysLogHandler(address='/dev/log')
+_syslog_handler.setFormatter(_logging.Formatter(fmt=LOGFORMAT))
+logging.addHandler(_syslog_handler)
 
 MAX_THREAD_POOL=2
 THREAD_POOL=[None]*MAX_THREAD_POOL
@@ -27,6 +43,7 @@ def print_dic(obj):
 	return json.dumps(obj,indent=4,sort_keys=True)
 
 def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newlines=True):
+	privileged_commands=['docker','modprobe']
 	command=list()
 	if isinstance(cmd,str):
 		command.extend(cmd.split())
@@ -40,8 +57,9 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 		custom_env["LANGUAGE"] = "en"
 		custom_env["LC_ALL"] = "en.UTF-8"
 		#logging.debug(print_dic(custom_env))
-		if 'docker' in command[0]:
-			command.insert(0,'pkexec')			
+		for pc in privileged_commands:
+			if pc in command[0]:
+				command.insert(0,'pkexec')			
 		logging.debug("Executing {}".format(command))
 		output = subprocess.check_output(command,shell=shell,stderr=stderr,universal_newlines=universal_newlines,env=custom_env)
 		retcode = 0
@@ -62,7 +80,7 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 			return True
 		else:
 			return False
-
+	
 def docker_installed():
 	global DOCKER_IS_INSTALLED
 	
@@ -98,7 +116,7 @@ def remove_image():
 
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	ret = execute('docker rmi ' + IMAGE_NAME, False)
+	ret = execute('docker rmi {}'.format(IMAGE_NAME), False)
 	if not image_available():
 		return True
 	else:
@@ -109,14 +127,14 @@ def get_image():
 
 	if not docker_installed():
 		raise OSError("docker is not installed")
-	return execute('docker pull ' + IMAGE_NAME, False)
+	return execute('docker pull {}'.format(IMAGE_NAME), False)
 
 def container_available():
 	global IMAGE_NAME, CONTAINER_NAME
 
 	if not docker_installed():
 		return False
-	ret,out = execute('docker ps -a -q  -f=name=' + CONTAINER_NAME + ' -f=ancestor=' + IMAGE_NAME)
+	ret,out = execute('docker ps -a -q  -f=name={} -f=ancestor={}'.format(CONTAINER_NAME,IMAGE_NAME))
 	if out and len(out) == 12:
 		logging.info('Container is available')
 		return True
@@ -131,14 +149,15 @@ def get_container():
 		raise OSError("Docker is not installed")
 	
 	cmdline=['docker run']
-	cmdline.append('-d')
+	cmdline.append('-i')
 	cmdline.append('--privileged')
 	cmdline.append('-v /tmp/.X11-unix:/tmp/.X11-unix')
 	cmdline.append('-e DISPLAY=:0')
-	cmdline.append('--name ' + CONTAINER_NAME)
+	cmdline.append('--name {}'.format(CONTAINER_NAME))
 	
 	cmdline = ' '.join(cmdline)
 	cmdline += ' ' + IMAGE_NAME
+	logging.info('Creating new container from {}'.format(IMAGE_NAME))
 	ret = execute(cmdline,False)
 	return ret
 
@@ -147,7 +166,8 @@ def run_container():
 
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	ret = execute('docker start ' +  CONTAINER_NAME, shell=False)
+	logging.info('Starting container {}'.format(CONTAINER_NAME))
+	ret = execute('docker start {}'.format(CONTAINER_NAME))
 	return ret
 	
 def container_running():
@@ -157,7 +177,8 @@ def container_running():
 		raise OSError("Docker is not installed")
 	if not container_available():
 		return False
-	ret, out = execute('docker ps -a -f=name='+CONTAINER_NAME+' --format {{.Status}}')
+	go_format_status='{{.Status}}'
+	ret, out = execute('docker ps -a -f=name={} --format {}'.format(CONTAINER_NAME,go_format_status))
 	wrong_status = ['dead','removing','exited']
 	if out:
 		status = out.split()[0] or None
@@ -177,7 +198,8 @@ def remove_container():
 	if container_available():
 		if container_running():
 			stop_container()
-		ret, out = execute('docker rm '+CONTAINER_NAME)
+		logging.info('Removing container')
+		ret, out = execute('docker rm {}'.format(CONTAINER_NAME))
 		if ret == 0:
 			return True
 		else:
@@ -191,7 +213,7 @@ def stop_container():
 		raise OSError("Docker is not installed")
 	if container_running():
 		stop_container()
-	ret, out = execute('docker stop '+CONTAINER_NAME)
+	ret, out = execute('docker stop {}'.format(CONTAINER_NAME))
 	if ret == 0:
 		return True
 	else:
@@ -209,8 +231,7 @@ def get_logs():
 		if ret == 0:
 			return out
 def print_logs():
-	pass
-	#print(get_logs())
+	print(get_logs())
 
 def check_logs():
 	output = get_logs()
@@ -262,11 +283,65 @@ def create_timer(fn,timer):
 		return t
 	return None
 
+def get_x_permission():
+	global current_username
+	n = 2
+	while n > 0:
+		ret, out = execute('xhost')
+		if 'access control disabled' in out.lower():
+			return True
+		else:
+			execute('xhost +',False)
+			n=n-1
+	return False
+			
+def remove_x_permission():
+	n = 2
+	while n > 0:
+		ret, out = execute('xhost')
+		if 'access control enabled' in out.lower():
+			return True
+		else:
+			execute('xhost -',False)
+			n=n-1
+	return False		
+
+def nwfermi_available():
+	ret,lmodules = execute('lsmod')
+	lmodules = lmodules.strip().split('\n')
+	lmodules = [ m.split()[0] for m in lmodules ]
+	if 'nw_fermi' in lmodules:
+		logging.info('nw_fermi loaded')
+		return True
+	else:
+		logging.warning('nw_fermi not loaded')
+		return False
+
+def check_nwfermi():
+	if not nwfermi_available():
+		if not load_nwfermi():
+			logging.error('Unable to load nw_fermi module, maybe is not installed?')
+	if nwfermi_available():
+		start_namedev = 'nwfermi'
+		nwfermi_devs = [d for x in os.listdir('/dev') if x[:len(start_namedev)] == start_namedev ]
+		if (len(nwfermi_devs) > 0):
+			return True
+		else:
+			logging.warning('Board not detected, maybe is not connected?')
+
+def load_nwfermi():
+	ret, out = execute('modprobe nw_fermi')
+	if ret != 0:
+		logging.error("Can't load nw_fermi module, error is: {}".format(out.strip()))
+		return False
+	return True
+
 def start_software():
 	try:
 		if not get_x_permission():
 			logging.critical("Can't get X permission, aborting")
 			return False
+		check_nwfermi()
 		if not container_running():
 			if container_available():
 				run_container()
@@ -285,31 +360,9 @@ def start_software():
 		logging.debug("Starting software failed, error is: '{}'".format(e))
 		return False
 
-def get_x_permission():
-	n = 2
-	while n > 0:
-		ret, out = execute('xhost')
-		if 'access control disabled' in out.lower():
-			return True
-		else:
-			execute('xhost +',False)
-			n=n-1
-	return False
-			
-def remove_x_permission():
-	n = 2
-	while n > 0:
-		ret, out = execute('xhost')
-		if 'access control enabled' not in out.lower():
-			return True
-		else:
-			execute('xhost -',False)
-			n=n-1
-	return False		
-		
-
 if __name__ == '__main__':
+	logging.info("Running as {} ({})".format(current_username,current_uid))
 	result = start_software()
 	join_all_threads()
-	print('Exitting')
+	logging.info('Exitting')
 	
