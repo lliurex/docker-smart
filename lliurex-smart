@@ -11,9 +11,11 @@ import time
 import threading
 
 IMAGE_NAME='lliurex/lliurex-smart:latest'
-CONTAINER_NAME='test-smart'
+CONTAINER_NAME='smart'
+MAIN_STORAGE_NAME="lliurex-smart-storage"
+CONFIG_STORAGE_NAME="lliurex-smart-config"
 
-DEBUG=0
+DEBUG=1
 
 ################# END EDITABLE VARS ##################
 
@@ -22,7 +24,7 @@ def check_running_user():
 	return (uid,pwd.getpwuid(uid).pw_name)
 	
 current_uid,current_username = check_running_user()
-LOGFORMAT='lliurex-smart as [{}({})] %(levelname)s %(message)s'.format(current_username,current_uid)
+LOGFORMAT='lliurex-smart as [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
 if (DEBUG):
 	_logging.basicConfig(level=_logging.DEBUG,format=LOGFORMAT)
 else:
@@ -80,7 +82,10 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 			return True
 		else:
 			return False
-	
+def get_image_name():
+	global IMAGE_NAME
+	return IMAGE_NAME
+
 def docker_installed():
 	global DOCKER_IS_INSTALLED
 	
@@ -99,11 +104,9 @@ def docker_installed():
 	return DOCKER_IS_INSTALLED
 
 def image_available():
-	global IMAGE_NAME
-
 	if not docker_installed():
 		return False
-	ret,out = execute('docker images -a -q ' + IMAGE_NAME)
+	ret,out = execute('docker images -a -q {}'.format(get_image_name()))
 	if out and len(out) == 12:
 		logging.info('Image available')
 		return True
@@ -112,29 +115,23 @@ def image_available():
 		return False
 
 def remove_image():
-	global IMAGE_NAME
-
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	ret = execute('docker rmi {}'.format(IMAGE_NAME), False)
+	ret = execute('docker rmi {}'.format(get_image_name()), False)
 	if not image_available():
 		return True
 	else:
 		raise SystemError("Error removing image")
 
 def get_image():
-	global IMAGE_NAME
-
 	if not docker_installed():
 		raise OSError("docker is not installed")
-	return execute('docker pull {}'.format(IMAGE_NAME), False)
+	return execute('docker pull {}'.format(get_image_name()), False)
 
 def container_available():
-	global IMAGE_NAME, CONTAINER_NAME
-
 	if not docker_installed():
 		return False
-	ret,out = execute('docker ps -a -q  -f=name={} -f=ancestor={}'.format(CONTAINER_NAME,IMAGE_NAME))
+	ret,out = execute('docker ps -a -q  -f=name=^/{}$ -f=ancestor={}'.format(get_container_name(),get_image_name()))
 	if out and len(out) == 12:
 		logging.info('Container is available')
 		return True
@@ -142,45 +139,57 @@ def container_available():
 		logging.info('Container is not available')
 		return False
 
+def get_container_name():
+	global CONTAINER_NAME, current_username, current_uid
+	return '{}-{}-{}'.format(CONTAINER_NAME,current_username,current_uid)
+	
 def get_container():
-	global IMAGE_NAME, CONTAINER_NAME
-
+	global current_username
+	
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	
+		
 	cmdline=['docker run']
 	cmdline.append('-i')
 	cmdline.append('--privileged')
 	cmdline.append('-v /tmp/.X11-unix:/tmp/.X11-unix')
+	if storage_available():
+		cmdline.append('-v {}:/root'.format(get_storage_path()))
+	if config_storage_available():
+		cmdline.append('-v {}:/root/.config'.format(get_config_storage_path()))
 	cmdline.append('-e DISPLAY=:0')
-	cmdline.append('--name {}'.format(CONTAINER_NAME))
+	cmdline.append('--name {}'.format(get_container_name()))
 	
 	cmdline = ' '.join(cmdline)
-	cmdline += ' ' + IMAGE_NAME
-	logging.info('Creating new container from {}'.format(IMAGE_NAME))
+	cmdline += ' {}'.format(IMAGE_NAME)
+	logging.info('Creating new container from {}'.format(get_image_name()))
 	ret = execute(cmdline,False)
-	return ret
+	if ret != 0:
+		return False
+	else:
+		return True
 
 def run_container():
-	global CONTAINER_NAME
-
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	logging.info('Starting container {}'.format(CONTAINER_NAME))
-	ret = execute('docker start {}'.format(CONTAINER_NAME))
-	return ret
+	logging.info('Starting container {}'.format(get_container_name()))
+	ret = execute('docker start {}'.format(get_container_name()))
+	if ret != 0:
+		return False
+	else:
+		return True
 	
 def container_running():
-	global CONTAINER_NAME
-
 	if not docker_installed():
 		raise OSError("Docker is not installed")
 	if not container_available():
 		return False
 	go_format_status='{{.Status}}'
-	ret, out = execute('docker ps -a -f=name={} --format {}'.format(CONTAINER_NAME,go_format_status))
+	ret, out = execute('docker ps -a -f=name=^/{}$ --format {}'.format(get_container_name(),go_format_status))
 	wrong_status = ['dead','removing','exited']
-	if out:
+	if not out:
+		return False
+	else:
 		status = out.split()[0] or None
 		if not status:
 			raise SystemError("Error checking container_running")
@@ -191,15 +200,14 @@ def container_running():
 			return True
 	
 def remove_container():
-	global CONTAINER_NAME
-
 	if not docker_installed():
 		raise OSError("Docker is not installed")
+	logging.debug("Trying to remove container")
 	if container_available():
 		if container_running():
 			stop_container()
 		logging.info('Removing container')
-		ret, out = execute('docker rm {}'.format(CONTAINER_NAME))
+		ret, out = execute('docker rm {}'.format(get_container_name()))
 		if ret == 0:
 			return True
 		else:
@@ -207,39 +215,41 @@ def remove_container():
 	return True
 
 def stop_container():
-	global CONTAINER_NAME
-
 	if not docker_installed():
 		raise OSError("Docker is not installed")
 	if container_running():
-		stop_container()
-	ret, out = execute('docker stop {}'.format(CONTAINER_NAME))
-	if ret == 0:
-		return True
+		ret, out = execute('docker stop {}'.format(get_container_name()))
+		if ret == 0:
+			return True
+		else:
+			return False
 	else:
-		return False
+		return True
 
 def get_logs():
-	global CONTAINER_NAME
-	
 	if not docker_installed():
 		raise OSError("Docker is not installed")
+	logging.debug("Getting container logs")
 	if not container_available():
 		return False
 	else:
-		ret,out = execute('docker logs {} --since 2m'.format(CONTAINER_NAME),stderr=subprocess.STDOUT)
+		ret,out = execute('docker logs {} --since 2m'.format(get_container_name()),stderr=subprocess.STDOUT)
 		if ret == 0:
 			return out
+		else:
+			return None
 def print_logs():
 	print(get_logs())
 
 def check_logs():
+	logging.debug("Checking container logs")
 	output = get_logs()
 	if not output or "cannot connect to X server" in output:
 		logging.critical("Execution Failed")
 		remove_container()
 	else:
 		logging.info("Execution Succeded")
+	logging.debug("End check logs")
 
 def get_threads_size():
 	global THREAD_POOL
@@ -256,7 +266,8 @@ def get_thread_object(fn):
 	
 def join_all_threads():
 	global THREAD_POOL, MAX_THREAD_POOL
-	max_iter = 10
+	max_iter = 8
+	init_sleep = 1
 	while get_threads_size() > 0 and max_iter > 0:
 		max_iter = max_iter - 1
 		for i in range(0,MAX_THREAD_POOL):
@@ -264,6 +275,10 @@ def join_all_threads():
 				THREAD_POOL[i] = None
 		for i in [ x for x in range(0,MAX_THREAD_POOL) if THREAD_POOL[x] is not None ]:
 			THREAD_POOL[i].join(1)
+		time.sleep(init_sleep)
+		init_sleep = init_sleep + 1
+	if max_iter == 0:
+		logging.error('Max loop wait while joining threads')
 	return True
 
 def create_timer(fn,timer):
@@ -276,9 +291,11 @@ def create_timer(fn,timer):
 		return None
 	
 	t = get_threads_pool_position()
-	logging.debug("Creating timer on {}".format(t))
+	namethread = '_timer_{}'.format(fn.__name__)
+	logging.debug("Creating timer on {} with name {}".format(t,namethread))
 	if t is not None:
 		THREAD_POOL[t] = threading.Timer(timer,fn)
+		THREAD_POOL[t].setName(namethread)
 		THREAD_POOL[t].start()
 		return t
 	return None
@@ -292,7 +309,9 @@ def get_x_permission():
 			return True
 		else:
 			execute('xhost +',False)
-			n=n-1
+		n=n-1
+	if n==0:
+		logging.error('Max loop wait while getting x permission')
 	return False
 			
 def remove_x_permission():
@@ -303,7 +322,9 @@ def remove_x_permission():
 			return True
 		else:
 			execute('xhost -',False)
-			n=n-1
+		n=n-1
+	if n==0:
+		logging.error('Max loop wait while removing x permission')
 	return False		
 
 def nwfermi_available():
@@ -335,6 +356,48 @@ def load_nwfermi():
 		logging.error("Can't load nw_fermi module, error is: {}".format(out.strip()))
 		return False
 	return True
+	
+def get_storage_path():
+	global MAIN_STORAGE_NAME
+	homedir = pwd.getpwuid(os.geteuid()).pw_dir
+	return '{}/{}'.format(homedir,MAIN_STORAGE_NAME)
+
+def get_config_storage_path():
+	global CONFIG_STORAGE_NAME
+	homedir = pwd.getpwuid(os.geteuid()).pw_dir
+	return '{}/{}'.format(homedir,CONFIG_STORAGE_NAME)
+	
+def storage_available():
+	dir = get_storage_path()
+	return os.path.exists(dir) and os.access(dir,os.R_OK) and os.access(dir,os.W_OK) and os.access(dir,os.X_OK)
+
+def config_storage_available():
+	dir = get_config_storage_path()
+	return os.path.exists(dir) and os.access(dir,os.R_OK) and os.access(dir,os.W_OK) and os.access(dir,os.X_OK)
+	
+def make_storage():
+	dir = get_storage_path()
+	try:
+		os.mkdir(dir)
+	except:
+		pass
+	return os.path.exists(dir) and os.access(dir,os.R_OK) and os.access(dir,os.W_OK) and os.access(dir,os.X_OK)
+
+def make_config_storage():
+	dir = get_config_storage_path()
+	try:
+		os.mkdir(dir)
+	except:
+		pass
+	return os.path.exists(dir) and os.access(dir,os.R_OK) and os.access(dir,os.W_OK) and os.access(dir,os.X_OK)
+
+def get_temp_dir_name():
+	return '/tmp/docker_tmp_{}'.format(get_container_name())
+	
+def make_temp_dir():
+	dirname = get_temp_dir_name()
+	if not os.path.exists(dirname):
+		os.mkdir(dirname())
 
 def start_software():
 	try:
@@ -342,16 +405,29 @@ def start_software():
 			logging.critical("Can't get X permission, aborting")
 			return False
 		check_nwfermi()
+		if not storage_available():
+			logging.warning("Storage not available, trying to create")
+			if make_storage():
+				logging.info("New storage created")
+			else:
+				logging.error("Unable to create storage")
+		if not config_storage_available():
+			logging.warning("Config storage not available, trying to create")
+			if make_config_storage():
+				logging.info("New config storage created")
+			else:
+				logging.error("Unable to create config storage")
 		if not container_running():
+			if create_timer(check_logs,10) is None:
+				logging.warning("Couldn't create log watchdog timer")
+				
 			if container_available():
 				run_container()
 			else:
 				if not image_available():
 					get_image()
 				get_container()
-		
-			if create_timer(check_logs,3) is None:
-				logging.warning("Couldn't create log watch timer")
+			
 		return True
 		
 	except Exception as e:
