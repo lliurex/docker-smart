@@ -15,7 +15,7 @@ CONTAINER_NAME='smart'
 MAIN_STORAGE_NAME="lliurex-smart-storage"
 CONFIG_STORAGE_NAME="lliurex-smart-config"
 
-DEBUG=1
+DEBUG=0
 
 ################# END EDITABLE VARS ##################
 
@@ -276,7 +276,7 @@ def join_all_threads():
 		for i in [ x for x in range(0,MAX_THREAD_POOL) if THREAD_POOL[x] is not None ]:
 			THREAD_POOL[i].join(1)
 		time.sleep(init_sleep)
-		init_sleep = init_sleep + 1
+		#init_sleep = init_sleep + 1
 	if max_iter == 0:
 		logging.error('Max loop wait while joining threads')
 	return True
@@ -417,7 +417,9 @@ def start_software():
 				logging.info("New config storage created")
 			else:
 				logging.error("Unable to create config storage")
-		if not container_running():
+		if container_running():
+			logging.info('Container running, start not needed')
+		else:
 			if create_timer(check_logs,10) is None:
 				logging.warning("Couldn't create log watchdog timer")
 				
@@ -427,7 +429,6 @@ def start_software():
 				if not image_available():
 					get_image()
 				get_container()
-			
 		return True
 		
 	except Exception as e:
@@ -436,9 +437,27 @@ def start_software():
 		logging.debug("Starting software failed, error is: '{}'".format(e))
 		return False
 
+def stop_software():
+	try:
+		if not container_running():
+			logging.info('Container not running, stop not needed')
+			return True
+		else:
+			if stop_container():
+				logging.info('Container stopped')
+			else:
+				logging.error('Error when trying to stop running container')
+	except Exception as e:
+		import traceback
+		logging.debug(traceback.format_exc())
+		logging.debug("Stopping software failed, error is: '{}'".format(e))
+		return False
+
 if __name__ == '__main__':
 	logging.info("Running as {} ({})".format(current_username,current_uid))
 	result = start_software()
 	join_all_threads()
+	#time.sleep(10)
+	#result = stop_software()
 	logging.info('Exitting')
 	
