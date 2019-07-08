@@ -23,7 +23,7 @@ done
 addgroup --quiet --gid ${GID} ${GROUP} || true
 adduser  --quiet --home /home/${USER} --shell /bin/false --gecos "UserAccount" --uid ${UID} --ingroup ${GROUP} --disabled-password --disabled-login ${USER} || true
 adduser --quiet lliurex video
-if [ ! -l '/root/lliurex-smart-storage' ]; then
+if [ ! -L '/root/lliurex-smart-storage' ]; then
     ln -s /home/${USER} /root/lliurex-smart-storage || true
 fi
 export LANG=es_ES.UTF-8
