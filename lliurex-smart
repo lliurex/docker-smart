@@ -16,7 +16,7 @@ CONTAINER_NAME='smart'
 MAIN_STORAGE_NAME="lliurex-smart-storage"
 CONFIG_STORAGE_NAME="lliurex-smart-config"
 
-DEBUG=0
+DEBUG=1
 
 ################# END EDITABLE VARS ##################
 
@@ -162,7 +162,7 @@ def get_container():
 	if storage_available():
 		cmdline.append('-v {}:/home/{}'.format(get_storage_path(),uname))
 	if config_storage_available():
-		cmdline.append('-v {}:/home/{}/.config'.format(get_config_storage_path(),uname))
+		cmdline.append('-v {}:/root/.config'.format(get_config_storage_path(),uname))
 	cmdline.append('-e DISPLAY=:0')
 	gid,gname=check_running_group()
 	cmdline.append('-e USER={}'.format(uname))
@@ -375,47 +375,66 @@ def get_storage_path():
 
 def get_config_storage_path():
 	global CONFIG_STORAGE_NAME
-	homedir = pwd.getpwuid(os.geteuid()).pw_dir
-	return '{}/{}'.format(homedir,CONFIG_STORAGE_NAME)
+	configdir = '/etc'
+	return '{}/{}'.format(configdir,CONFIG_STORAGE_NAME)
 	
+def permission_storage():
+	return os.R_OK|os.W_OK|os.X_OK
+
+def permission_config():
+	return os.R_OK|os.X_OK
+
 def storage_available():
 	folder = get_storage_path()
-	return os.path.exists(folder) and os.access(folder,os.R_OK|os.W_OK|os.X_OK)
+	return os.path.exists(folder) and os.access(folder,permission_storage())
 
 def config_storage_available():
 	folder = get_config_storage_path()
-	return os.path.exists(folder) and os.access(folder,os.R_OK|os.W_OK|os.X_OK)
+	return os.path.exists(folder) and os.access(folder,permission_config())
 	
 def set_permission_dir(folder):
-	os.chmod(folder, 0o2775)
-	gid,name=check_running_group()
-	os.system('setfacl -m g:{}:rwx {}'.format(name,folder))
-	os.system('setfacl -m d:g:{}:rwx {}'.format(name,folder))
-	os.system('setfacl -m m::rwx {}'.format(folder))
+	os.chmod(folder,0o0755)
+	return True
+
+def set_permission_configdir(folder):
+	ret,out = execute('pkexec chmod 0755 {}'.format(folder))
+	if ret == 0:
+		return True
+	else:
+		raise Exception('Error executing chmod, error is: {}'.format(out))
 
 def make_storage():
 	folder = get_storage_path()
-	try:
-		os.mkdir(folder)
-	except Exception as e:
-		logging.warning('Error creating storage path, {}'.format(e))
-	try:
-		set_permission_dir(folder)
-	except Exception as e:
-		logging.warning('Error setting permissions on storage path, {}'.format(e))
-	return os.path.exists(folder) and os.access(folder,os.R_OK|os.W_OK|os.X_OK)
+	if not os.path.exists(folder):
+		try:
+			os.mkdir(folder)
+		except Exception as e:
+			logging.warning('Error creating storage path, {}'.format(e))
+	if not os.access(folder,permission_storage()):
+		try:
+			set_permission_dir(folder)
+		except Exception as e:
+			logging.warning('Error setting permissions on storage path, {}'.format(e))
+	return os.path.exists(folder) and os.access(folder,permission_storage())
 
 def make_config_storage():
 	folder = get_config_storage_path()
-	try:
-		os.mkdir(folder)
-	except Exception as e:
-		logging.warning('Error creating storage config path, {}'.format(e))
-	try:
-		set_permission_dir(folder)
-	except Exception as e:
-		logging.warning('Error setting permissions on storage config path, {}'.format(e))
-	return os.path.exists(folder) and os.access(folder,os.R_OK|os.W_OK|os.X_OK)
+	if not os.path.exists(folder):
+		try:
+			os.mkdir(folder)
+		except Exception as e:
+			try:
+				ret,out = execute('pkexec mkdir -p {}'.format(folder),stdout=subprocess.STDOUT)
+				if ret != 0:
+					raise Exception('Unable to create config storage, {}'.format(out))
+			except Exception as e2:
+				logging.warning('Error creating storage config path, {}'.format(e2))
+	if not os.access(folder,permission_config()):
+		try:
+			set_permission_configdir(folder)
+		except Exception as e:
+			logging.warning('Error setting permissions on storage config path, {}'.format(e))
+	return os.path.exists(folder) and os.access(folder,permission_config())
 
 def get_temp_dir_name():
 	return '/tmp/docker_tmp_{}'.format(get_container_name())
@@ -437,12 +456,14 @@ def start_software():
 				logging.info("New storage created")
 			else:
 				logging.error("Unable to create storage")
+				return False
 		if not config_storage_available():
 			logging.warning("Config storage not available, trying to create")
 			if make_config_storage():
 				logging.info("New config storage created")
 			else:
 				logging.error("Unable to create config storage")
+				return False
 		if container_running():
 			logging.info('Container running, start not needed')
 		else:
