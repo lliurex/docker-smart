@@ -30,4 +30,6 @@ export LANG=es_ES.UTF-8
 /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMARTBoardService_elf &
 /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMART\ Board\ Tools_elf
 chown -R $USER:$GROUP /home/${USER} || true
-chown -R $USER:$GROUP /root || true
+
+# Config has root perms
+#chown -R $USER:$GROUP /root || true
