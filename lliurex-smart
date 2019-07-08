@@ -16,7 +16,7 @@ CONTAINER_NAME='smart'
 MAIN_STORAGE_NAME="lliurex-smart-storage"
 CONFIG_STORAGE_NAME="lliurex-smart-config"
 
-DEBUG=1
+DEBUG=0
 
 ################# END EDITABLE VARS ##################
 
@@ -502,9 +502,20 @@ def stop_software():
 
 if __name__ == '__main__':
 	logging.info("Running as {} ({})".format(current_username,current_uid))
-	result = start_software()
-	join_all_threads()
-	#time.sleep(10)
-	#result = stop_software()
+	parser = argparse.ArgumentParser(description="Lliurex-smart command line tool")
+	opts = parser.add_mutually_exclusive_group(required=True)
+	opts.add_argument('-start',action='store_true',help="Start software")
+	opts.add_argument('-stop',action='store_true',help="Stop software")
+	opts.add_argument('-download',action="store_true",help="Download software image")
+	opts.add_argument('-clean',action='store_true',help="Clean user installation instance")
+	opts.add_argument('-purge',action="store_true",help="Really clean installation")
+	opts.add_argument('-clearconfig',action="store_true",help="Clean configuration")
+	args=parser.parse_args()
+	if args.start:
+		result = start_software()
+		join_all_threads()
+	if args.stop:
+		result = stop_software()
+	
 	logging.info('Exitting')
 	
