@@ -13,8 +13,7 @@ SERVICES="/bin/dbus-uuidgen --ensure;/bin/dbus-daemon --system --fork;/usr/bin/p
 #rm -rf /tmp/*
 bash /usr/sbin/nwfermi_daemon.sh
 rm -f /var/run/dbus/pid > /dev/null 2>&1
-sleep 2
-
+sleep 1
 IFS=';'
 for s in $SERVICES; do
     echo $s
@@ -22,7 +21,6 @@ for s in $SERVICES; do
 done
 addgroup --quiet --gid ${GID} ${GROUP} || true
 adduser  --quiet --home /home/${USER} --shell /bin/false --gecos "UserAccount" --uid ${UID} --ingroup ${GROUP} --disabled-password --disabled-login ${USER} || true
-adduser --quiet lliurex video
 if [ ! -L '/root/lliurex-smart-storage' ]; then
     ln -s /home/${USER} /root/lliurex-smart-storage || true
 fi
