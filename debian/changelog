@@ -1,3 +1,9 @@
+lliurex-smart (0.1.1) bionic; urgency=medium
+
+  * Add desktop & icon
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Tue, 09 Jul 2019 14:24:51 +0200
+
 lliurex-smart (0.1) bionic; urgency=medium
 
   * Initial release
