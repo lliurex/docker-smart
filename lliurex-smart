@@ -16,7 +16,7 @@ CONTAINER_NAME='smart'
 MAIN_STORAGE_NAME="lliurex-smart-storage"
 CONFIG_STORAGE_NAME="lliurex-smart-config"
 
-DEBUG=0
+DEBUG=1
 
 ################# END EDITABLE VARS ##################
 
@@ -159,6 +159,19 @@ def remove_image():
 	else:
 		raise SystemError("Error removing image")
 
+def remove_all():
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	ret,out = execute("docker rm -f $(docker ps -a -q -f=ancestor={})".format(get_image_name()),shell=True)
+	if ret != 0:
+		logging.error('Error removing all containers, error is: {}'.format(out))
+		return False
+	ret,out = execute("docker rmi -f {}".format(get_image_name()))
+	if ret != 0:
+		logging.error('Error removing image when trying to purge all, error is: {}'.format(out))
+		return False
+	return True
+
 def get_image():
 	if not docker_installed():
 		raise OSError("docker is not installed")
@@ -178,6 +191,15 @@ def container_available():
 def get_container_name():
 	global CONTAINER_NAME, current_username, current_uid
 	return '{}-{}-{}'.format(CONTAINER_NAME,current_username,current_uid)
+
+def get_display():
+	d = os.environ.get('DISPLAY')
+	if d:
+		logging.info("Using display: '{}'".format(d))
+	else:
+		d = ':0'
+		logging.warning("Unable to get display environment variable, falling back to '{}'".format(d))
+	return d
 	
 def get_container():
 	global current_username
@@ -194,7 +216,7 @@ def get_container():
 		cmdline.append('-v {}:/home/{}'.format(get_storage_path(),uname))
 	if config_storage_available():
 		cmdline.append('-v {}:/root/.config'.format(get_config_storage_path(),uname))
-	cmdline.append('-e DISPLAY=:0')
+	cmdline.append('-e DISPLAY={}'.format(get_display()))
 	gid,gname=check_running_group()
 	cmdline.append('-e USER={}'.format(uname))
 	cmdline.append('-e UID={}'.format(uid))
@@ -448,6 +470,22 @@ def make_storage():
 			logging.warning('Error setting permissions on storage path, {}'.format(e))
 	return os.path.exists(folder) and os.access(folder,permission_storage())
 
+def clean_config_storage():
+	folder = get_config_storage_path()
+	if not os.path.exists(folder):
+		return True
+	else:
+		try:
+			ret,out = execute('rmdir {}'.format(folder),stdout=subprocess.STDOUT)
+			if ret != 0:
+				raise Exception('Unable to remove config storage at {}, {}'.format(folder,out))
+			return True
+		except Exception as e:
+			logging.error('Unknown error removing storage config at {}, {}'.format(folder,e))
+			return False
+	return None
+			
+
 def make_config_storage():
 	folder = get_config_storage_path()
 	if not os.path.exists(folder):
@@ -534,6 +572,7 @@ def stop_software():
 if __name__ == '__main__':
 	logging.info("Running as {} ({})".format(current_username,current_uid))
 	parser = argparse.ArgumentParser(description="Lliurex-smart command line tool")
+	parser.add_argument('-debug',action='store_true',help="Debug flag")
 	opts = parser.add_mutually_exclusive_group(required=True)
 	opts.add_argument('-start',action='store_true',help="Start software")
 	opts.add_argument('-stop',action='store_true',help="Stop software")
@@ -542,11 +581,22 @@ if __name__ == '__main__':
 	opts.add_argument('-purge',action="store_true",help="Really clean installation")
 	opts.add_argument('-clearconfig',action="store_true",help="Clean configuration")
 	args=parser.parse_args()
+	if args.debug:
+		DEBUG=1
+	logging.debug('Parsed: {}'.format(args))
 	if args.start:
 		result = start_software()
 		join_all_threads()
 	if args.stop:
 		result = stop_software()
-	
-	logging.info('Exitting')
+	if args.download:
+		result = get_image()
+	if args.clean:
+		result = remove_container()
+	if args.purge:
+		result = remove_all()
+	if args.clearconfig:
+		result = clean_config_storage()
+		
+	logging.info('Exitting with {}'.format(result))
 	
