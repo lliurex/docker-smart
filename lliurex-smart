@@ -20,16 +20,46 @@ DEBUG=0
 
 ################# END EDITABLE VARS ##################
 
+def check_sudo_environment():
+	e = dict(os.environ).keys()
+	ks = ['SUDO_USER','SUDO_UID','SUDO_GID']
+	if len([ k for k in ks if k in e ]) == len(ks):
+		return True
+	else:
+		return False
+def get_sudo_environment_user():
+	if not check_sudo_environment():
+		return check_running_user()
+	e = dict(os.environ).keys()
+	return os.environ.get('SUDO_UID'),os.environ.get('SUDO_USER')
+
+def get_sudo_environment_group():
+	if not check_sudo_environment():
+		return check_running_group()
+	e = dict(os.environ).keys()
+	gid = os.environ.get('SUDO_GID')
+	return gid,grp.getgrgid(gid).gr_name
+	
 def check_running_user():
-	uid=os.geteuid()
+	if check_sudo_environment():
+		return get_sudo_environment_user()
+	else:
+		uid=os.geteuid()
 	return (uid,pwd.getpwuid(uid).pw_name)
 
 def check_running_group():
-	gid=os.getegid()
+	if check_sudo_environment():
+		return get_sudo_environment_group()
+	else:
+		gid=os.getegid()
 	return (gid,grp.getgrgid(gid).gr_name)
 	
 current_uid,current_username = check_running_user()
-LOGFORMAT='lliurex-smart as [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
+if check_sudo_environment():
+	LOGFORMAT='lliurex-smart as (SUDO) [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
+else:
+	LOGFORMAT='lliurex-smart as [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
+
 if (DEBUG):
 	_logging.basicConfig(level=_logging.DEBUG,format=LOGFORMAT)
 else:
@@ -50,7 +80,7 @@ def print_dic(obj):
 	return json.dumps(obj,indent=4,sort_keys=True)
 
 def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newlines=True):
-	privileged_commands=['docker','modprobe']
+	privileged_commands=['docker','modprobe','chmod','mkdir']
 	command=list()
 	if isinstance(cmd,str):
 		command.extend(cmd.split())
@@ -63,10 +93,11 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 		custom_env["LANG"] = "en"
 		custom_env["LANGUAGE"] = "en"
 		custom_env["LC_ALL"] = "en.UTF-8"
-		#logging.debug(print_dic(custom_env))
-		for pc in privileged_commands:
-			if pc in command[0]:
-				command.insert(0,'pkexec')			
+		logging.debug(print_dic(custom_env))
+		if not check_sudo_environment():
+			for pc in privileged_commands:
+				if pc in command[0]:
+					command.insert(0,'pkexec')			
 		logging.debug("Executing {}".format(command))
 		output = subprocess.check_output(command,shell=shell,stderr=stderr,universal_newlines=universal_newlines,env=custom_env)
 		retcode = 0
@@ -397,7 +428,7 @@ def set_permission_dir(folder):
 	return True
 
 def set_permission_configdir(folder):
-	ret,out = execute('pkexec chmod 0755 {}'.format(folder))
+	ret,out = execute('chmod 0755 {}'.format(folder))
 	if ret == 0:
 		return True
 	else:
@@ -424,7 +455,7 @@ def make_config_storage():
 			os.mkdir(folder)
 		except Exception as e:
 			try:
-				ret,out = execute('pkexec mkdir -p {}'.format(folder),stdout=subprocess.STDOUT)
+				ret,out = execute('mkdir -p {}'.format(folder),stdout=subprocess.STDOUT)
 				if ret != 0:
 					raise Exception('Unable to create config storage, {}'.format(out))
 			except Exception as e2:
