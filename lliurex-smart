@@ -20,6 +20,8 @@ DEBUG=0
 
 ################# END EDITABLE VARS ##################
 
+logging=None
+
 def check_sudo_environment():
 	e = dict(os.environ).keys()
 	ks = ['SUDO_USER','SUDO_UID','SUDO_GID']
@@ -54,22 +56,25 @@ def check_running_group():
 		gid=os.getegid()
 	return (gid,grp.getgrgid(gid).gr_name)
 	
-current_uid,current_username = check_running_user()
-if check_sudo_environment():
-	LOGFORMAT='lliurex-smart as (SUDO) [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
-else:
-	LOGFORMAT='lliurex-smart as [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
-
-if (DEBUG):
-	_logging.basicConfig(level=_logging.DEBUG,format=LOGFORMAT)
-else:
-	#_logging.basicConfig(level=_logging.WARNING,format=LOGFORMAT)
-	_logging.basicConfig(level=_logging.INFO,format=LOGFORMAT)
+def configure_log():
+	global DEBUG, logging, current_uid, current_username
 	
-logging = _logging.getLogger()
-_syslog_handler = _handlers.SysLogHandler(address='/dev/log')
-_syslog_handler.setFormatter(_logging.Formatter(fmt=LOGFORMAT))
-logging.addHandler(_syslog_handler)
+	current_uid,current_username = check_running_user()
+	if check_sudo_environment():
+		LOGFORMAT='lliurex-smart as (SUDO) [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
+	else:
+		LOGFORMAT='lliurex-smart as [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
+
+	if (DEBUG):
+		_logging.basicConfig(level=_logging.DEBUG,format=LOGFORMAT)
+	else:
+		#_logging.basicConfig(level=_logging.WARNING,format=LOGFORMAT)
+		_logging.basicConfig(level=_logging.INFO,format=LOGFORMAT)
+		
+	logging = _logging.getLogger()
+	_syslog_handler = _handlers.SysLogHandler(address='/dev/log')
+	_syslog_handler.setFormatter(_logging.Formatter(fmt=LOGFORMAT))
+	logging.addHandler(_syslog_handler)
 
 MAX_THREAD_POOL=2
 THREAD_POOL=[None]*MAX_THREAD_POOL
@@ -570,6 +575,7 @@ def stop_software():
 		return False
 
 if __name__ == '__main__':
+	configure_log()
 	logging.info("Running as {} ({})".format(current_username,current_uid))
 	parser = argparse.ArgumentParser(description="Lliurex-smart command line tool")
 	parser.add_argument('-debug',action='store_true',help="Debug flag")
@@ -583,6 +589,7 @@ if __name__ == '__main__':
 	args=parser.parse_args()
 	if args.debug:
 		DEBUG=1
+		logging.setLevel(_logging.DEBUG)
 	logging.debug('Parsed: {}'.format(args))
 	if args.start:
 		result = start_software()
