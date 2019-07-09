@@ -9,6 +9,6 @@ Vcs-Git: https://github.com/lliurex/docker-smart.git
 
 Package: lliurex-smart
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, 
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3
 Description: Utility to run Star board hardware
  Utility to run docker container that allow to run Star board hardware
