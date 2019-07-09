@@ -1,3 +1,10 @@
+lliurex-smart (0.1.3) bionic; urgency=medium
+
+  * Remove debug by default
+  * No remove images if error is happened 
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Tue, 09 Jul 2019 16:13:01 +0200
+
 lliurex-smart (0.1.2) bionic; urgency=medium
 
   * Use display environment var value

@@ -16,7 +16,7 @@ CONTAINER_NAME='smart'
 MAIN_STORAGE_NAME="lliurex-smart-storage"
 CONFIG_STORAGE_NAME="lliurex-smart-config"
 
-DEBUG=1
+DEBUG=0
 
 ################# END EDITABLE VARS ##################
 
@@ -310,7 +310,7 @@ def check_logs():
 	output = get_logs()
 	if not output or "cannot connect to X server" in output:
 		logging.critical("Execution Failed")
-		remove_container()
+		#remove_container()
 	else:
 		logging.info("Execution Succeded")
 	logging.debug("End check logs")
