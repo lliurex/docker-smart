@@ -1,0 +1,19 @@
+[Desktop Entry]
+Comment[es_ES]=
+Comment=
+Exec=sudo /usr/bin/lliurex-smart -start
+GenericName[es_ES]=
+GenericName=
+Icon=system-run
+MimeType=
+Name[es_ES]=Lliurex-smart
+Name=Lliurex-smart
+Path=
+StartupNotify=true
+Terminal=false
+TerminalOptions=
+Type=Application
+X-DBUS-ServiceName=
+X-DBUS-StartupType=none
+X-KDE-SubstituteUID=false
+X-KDE-Username=
