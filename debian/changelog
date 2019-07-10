@@ -1,3 +1,9 @@
+lliurex-smart (0.1.6) bionic; urgency=medium
+
+  * Allow remove image without containers in purge
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Wed, 10 Jul 2019 13:45:04 +0200
+
 lliurex-smart (0.1.5) bionic; urgency=medium
 
   * Fixes purging system

@@ -191,24 +191,28 @@ def remove_all():
 		raise OSError("Docker is not installed")
 	ids = get_all_container_id()
 	if not ids:
-		return False
-	ret,out = execute("docker rm -f {} {}".format(get_image_name(),' '.join(ids)))
-	if ret != 0:
-		out_ids = out.split()
-		same = True
-		for id in out_ids:
-			if id not in ids:
-				same = False
-				break
-		if same:
-			logging.info('Removed {}'.format(' '.join(out_ids)))
-		else:
-			logging.error('Error removing all containers, error is: {}'.format(out))
+		logging.warning("Containers not detected, skipping container removal")
+	else:
+		ret,out = execute("docker rm -f {} {}".format(get_image_name(),' '.join(ids)))
+		if ret != 0:
+			out_ids = out.split()
+			same = True
+			for id in out_ids:
+				if id not in ids:
+					same = False
+					break
+			if same:
+				logging.info('Removed {}'.format(' '.join(out_ids)))
+			else:
+				logging.error('Error removing all containers, error is: {}'.format(out))
+				return False
+	if image_available():
+		ret,out = execute("docker rmi -f {}".format(get_image_name()))
+		if ret != 0:
+			logging.error('Error removing image when trying to purge all, error is: {}'.format(out))
 			return False
-	ret,out = execute("docker rmi -f {}".format(get_image_name()))
-	if ret != 0:
-		logging.error('Error removing image when trying to purge all, error is: {}'.format(out))
-		return False
+	else:
+		logging.warning("Image not detected, skipping image removal")
 	return True
 
 def get_image():
