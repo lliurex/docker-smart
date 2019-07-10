@@ -155,6 +155,14 @@ def image_available():
 		logging.info('Image not available')
 		return False
 
+def wait_for_image():
+	t1 = time.time()
+	while not image_available():
+		t2 = time.time()
+		logging.debug("Waiting for image ({} seconds waiting)".format(int(t2-t1)))
+		time.sleep(2)
+	return True
+
 def remove_image():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
@@ -163,14 +171,40 @@ def remove_image():
 		return True
 	else:
 		raise SystemError("Error removing image")
-
+		
+def get_all_container_id():
+	if not docker_installed():
+		raise OSError("Docker is not installed")
+	ret,out = execute("docker ps -a -q -f=ancestor={}".format(get_image_name()))
+	if ret != 0:
+		logging.error('Error getting container ids, error is: {}'.format(out))
+		return False
+	try:
+		out = out.strip().split()
+	except Exception as e:
+		logging.warning("Error stripping '{}', error is: {}".format(out,e))
+		out = None
+	return out
+		
 def remove_all():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	ret,out = execute("docker rm -f $(docker ps -a -q -f=ancestor={})".format(get_image_name()),shell=True)
-	if ret != 0:
-		logging.error('Error removing all containers, error is: {}'.format(out))
+	ids = get_all_container_id()
+	if not ids:
 		return False
+	ret,out = execute("docker rm -f {} {}".format(get_image_name(),' '.join(ids)))
+	if ret != 0:
+		out_ids = out.split()
+		same = True
+		for id in out_ids:
+			if id not in ids:
+				same = False
+				break
+		if same:
+			logging.info('Removed {}'.format(' '.join(out_ids)))
+		else:
+			logging.error('Error removing all containers, error is: {}'.format(out))
+			return False
 	ret,out = execute("docker rmi -f {}".format(get_image_name()))
 	if ret != 0:
 		logging.error('Error removing image when trying to purge all, error is: {}'.format(out))
@@ -180,6 +214,7 @@ def remove_all():
 def get_image():
 	if not docker_installed():
 		raise OSError("docker is not installed")
+	t=get_thread_object(wait_for_image)
 	return execute('docker pull {}'.format(get_image_name()), False)
 
 def container_available():
@@ -213,7 +248,7 @@ def get_container():
 		raise OSError("Docker is not installed")
 		
 	cmdline=['docker run']
-	cmdline.append('-i')
+	cmdline.append('-d')
 	cmdline.append('--privileged')
 	cmdline.append('-v /tmp/.X11-unix:/tmp/.X11-unix')
 	uid,uname=check_running_user()
@@ -331,7 +366,21 @@ def get_threads_pool_position():
 	return None
 	
 def get_thread_object(fn):
-	pass
+	global THREAD_POOL, MAX_THREAD_POOL
+	
+	if get_threads_size() > MAX_THREAD_POOL:
+		logging.warning('Max threads reached, unable to allocate in pool')
+		return None
+	t = get_threads_pool_position()
+	namethread = '_thread_{}'.format(fn.__name__)
+	logging.debug("Creating thread on {} with name {}".format(t,namethread))
+	if t is not None:
+		THREAD_POOL[t] = threading.Thread(target=fn)
+		THREAD_POOL[t].setName(namethread)
+		THREAD_POOL[t].start()
+		return t
+	return None
+
 	
 def join_all_threads():
 	global THREAD_POOL, MAX_THREAD_POOL
@@ -541,15 +590,14 @@ def start_software():
 		if container_running():
 			logging.info('Container running, start not needed')
 		else:
-			if create_timer(check_logs,10) is None:
-				logging.warning("Couldn't create log watchdog timer")
-				
 			if container_available():
 				run_container()
 			else:
 				if not image_available():
 					get_image()
 				get_container()
+			if create_timer(check_logs,10) is None:
+				logging.warning("Couldn't create log watchdog timer")
 		return True
 		
 	except Exception as e:
