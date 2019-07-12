@@ -1,4 +1,4 @@
-FROM i386/ubuntu:14.04
+FROM lliurex/i386-ubuntu:14.04
 MAINTAINER M.Angel Juan <m.angel.juan@gmail.com>
 ENV DEBIAN_FRONTEND=noninteractive
 ENV QT_X11_NO_MITSHM=1
