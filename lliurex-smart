@@ -47,7 +47,8 @@ def check_running_user():
 	else:
 		uid=os.geteuid()
 	duser = (uid,pwd.getpwuid(uid).pw_name)
-	logging.debug("User detected '{}'".format(duser))
+	if logging:
+	        logging.debug("User detected '{}'".format(duser))
 	return duser
 
 def check_running_group():
@@ -56,7 +57,8 @@ def check_running_group():
 	else:
 		gid=os.getegid()
 	dgroup = (gid,grp.getgrgid(gid).gr_name)
-	logging.debug("Detected group '{}'".format(dgroup))
+	if logging:
+	        logging.debug("Detected group '{}'".format(dgroup))
 	return dgroup
 	
 def configure_log():
@@ -89,8 +91,7 @@ def print_dic(obj):
 
 def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newlines=True):
 	global SHOW_ENV_ONLY_ONE_TIME
-
-	privileged_commands=['docker','modprobe','chmod','mkdir']
+	privileged_commands=['docker','modprobe','chmod','mkdir','rm']
 	command=list()
 	if isinstance(cmd,str):
 		command.extend(cmd.split())
@@ -560,7 +561,7 @@ def clean_config_storage():
 		return True
 	else:
 		try:
-			ret,out = execute('rmdir {}'.format(folder),stdout=subprocess.STDOUT)
+			ret,out = execute('rm -rf {}'.format(folder),stdout=subprocess.STDOUT)
 			if ret != 0:
 				raise Exception('Unable to remove config storage at {}, {}'.format(folder,out))
 			return True
