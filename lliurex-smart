@@ -20,6 +20,7 @@ DEBUG=0
 
 ################# END EDITABLE VARS ##################
 
+SHOW_ENV_ONLY_ONE_TIME=1
 logging=None
 
 def check_sudo_environment():
@@ -32,14 +33,12 @@ def check_sudo_environment():
 def get_sudo_environment_user():
 	if not check_sudo_environment():
 		return check_running_user()
-	e = dict(os.environ).keys()
-	return os.environ.get('SUDO_UID'),os.environ.get('SUDO_USER')
+	return int(os.environ.get('SUDO_UID')),os.environ.get('SUDO_USER')
 
 def get_sudo_environment_group():
 	if not check_sudo_environment():
 		return check_running_group()
-	e = dict(os.environ).keys()
-	gid = os.environ.get('SUDO_GID')
+	gid = int(os.environ.get('SUDO_GID'))
 	return gid,grp.getgrgid(gid).gr_name
 	
 def check_running_user():
@@ -47,14 +46,18 @@ def check_running_user():
 		return get_sudo_environment_user()
 	else:
 		uid=os.geteuid()
-	return (uid,pwd.getpwuid(uid).pw_name)
+	duser = (uid,pwd.getpwuid(uid).pw_name)
+	logging.debug("User detected '{}'".format(duser))
+	return duser
 
 def check_running_group():
 	if check_sudo_environment():
 		return get_sudo_environment_group()
 	else:
 		gid=os.getegid()
-	return (gid,grp.getgrgid(gid).gr_name)
+	dgroup = (gid,grp.getgrgid(gid).gr_name)
+	logging.debug("Detected group '{}'".format(dgroup))
+	return dgroup
 	
 def configure_log():
 	global DEBUG, logging, current_uid, current_username
@@ -85,6 +88,8 @@ def print_dic(obj):
 	return json.dumps(obj,indent=4,sort_keys=True)
 
 def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newlines=True):
+	global SHOW_ENV_ONLY_ONE_TIME
+
 	privileged_commands=['docker','modprobe','chmod','mkdir']
 	command=list()
 	if isinstance(cmd,str):
@@ -98,7 +103,12 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 		custom_env["LANG"] = "en"
 		custom_env["LANGUAGE"] = "en"
 		custom_env["LC_ALL"] = "en.UTF-8"
-		logging.debug(print_dic(custom_env))
+		if SHOW_ENV_ONLY_ONE_TIME:
+			if SHOW_ENV_ONLY_ONE_TIME == 1:
+				logging.debug(print_dic(custom_env))
+				SHOW_ENV_ONLY_ONE_TIME = 2
+		else:
+			logging.debug(print_dic(custom_env))
 		if not check_sudo_environment():
 			for pc in privileged_commands:
 				if pc in command[0]:
@@ -481,13 +491,20 @@ def load_nwfermi():
 	
 def get_storage_path():
 	global MAIN_STORAGE_NAME
-	homedir = pwd.getpwuid(os.geteuid()).pw_dir
-	return '{}/{}'.format(homedir,MAIN_STORAGE_NAME)
+	uid, name = check_running_user()
+	if not uid:
+	    logging.error('Error checking user uid')
+	homedir = pwd.getpwuid(uid).pw_dir
+	storage = '{}/{}'.format(homedir,MAIN_STORAGE_NAME)
+	logging.debug("Using storage --> {}".format(storage))
+	return storage
 
 def get_config_storage_path():
 	global CONFIG_STORAGE_NAME
 	configdir = '/etc'
-	return '{}/{}'.format(configdir,CONFIG_STORAGE_NAME)
+	config = '{}/{}'.format(configdir,CONFIG_STORAGE_NAME)
+	logging.debug("Using configuration --> {}".format(config))
+	return config
 	
 def permission_storage():
 	return os.R_OK|os.W_OK|os.X_OK
@@ -497,11 +514,17 @@ def permission_config():
 
 def storage_available():
 	folder = get_storage_path()
-	return os.path.exists(folder) and os.access(folder,permission_storage())
+	if folder:
+		return os.path.exists(folder) and os.access(folder,permission_storage())
+	else:
+		logging.error("Couldn't detect path from storage, detection has a result --> {}".format(folder))
 
 def config_storage_available():
 	folder = get_config_storage_path()
-	return os.path.exists(folder) and os.access(folder,permission_config())
+	if folder:
+		return os.path.exists(folder) and os.access(folder,permission_config())
+	else:
+		logging.error("Couldn't detect path from config storage, detection has a result --> {}".format(folder))
 	
 def set_permission_dir(folder):
 	os.chmod(folder,0o0755)
@@ -516,9 +539,12 @@ def set_permission_configdir(folder):
 
 def make_storage():
 	folder = get_storage_path()
+	uid, uname = check_running_user()
+	gid, gname = check_running_group()
 	if not os.path.exists(folder):
 		try:
 			os.mkdir(folder)
+			os.chown(folder,uid,gid)
 		except Exception as e:
 			logging.warning('Error creating storage path, {}'.format(e))
 	if not os.access(folder,permission_storage()):
