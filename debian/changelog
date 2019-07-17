@@ -1,3 +1,9 @@
+lliurex-smart (1.0) bionic; urgency=medium
+
+  * Change to stable version
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Wed, 17 Jul 2019 10:30:19 +0200
+
 lliurex-smart (0.1.7.1) bionic; urgency=medium
 
   * Fix config deletion
