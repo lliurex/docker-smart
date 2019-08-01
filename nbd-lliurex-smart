@@ -1,0 +1,226 @@
+#!/bin/bash
+
+## START EDITABLE VARS
+DOWNLOAD_HOST=http://172.20.8.6/
+DNSNAME_IMG_HOST=server
+DOWNLOAD_PATH=/
+DOWNLOAD_FILENAME=fs-smart
+REGISTERED_IMAGE_NAME=lliurex-smart-nbd
+BLK_DIR=/opt/ltsp/blockdev
+IMG_FILENAME=nbd-fs-smart.img
+IMAGE_EXT=xz
+CRC_EXT=md5
+
+## END EDITABLE VARS
+
+HTTP_FILENAME="${DOWNLOAD_HOST}/${DOWNLOAD_PATH}/${DOWNLOAD_FILENAME}.${IMAGE_EXT}"
+HTTP_FILENAME_CRC="${DOWNLOAD_HOST}/${DOWNLOAD_PATH}/${DOWNLOAD_FILENAME}.${CRC_EXT}"
+TMP_FILENAME="/tmp/${DOWNLOAD_FILENAME}.${IMAGE_EXT}"
+TMP_FILE_CRC=" /tmp/${DOWNLOAD_FILENAME}.${CRC_EXT}"
+
+echo_nbd_server_conf(){
+	echo "[${REGISTERED_IMAGE_NAME}]"
+	echo "exportname = ${BLK_DIR}/${IMG_FILENAME}"
+	echo "copyonwrite = true"
+}
+prepare_blkdir(){
+	mkdir -p ${BLK_DIR}
+	chown root:nbd ${BLK_DIR}
+	chmod 1775 ${BLK_DIR}
+}
+move_image_to_blkdir(){
+	if [ ! -d ${BLK_DIR} ]; then
+		echo "Directory '${BLK_DIR}' not found"
+		exit 1
+	fi
+	mv ${TMP_FILENAME} ${BLK_DIR}
+	xz -d ${BLK_DIR}/${DOWNLOAD_FILENAME}.${IMAGE_EXT}
+	mv ${BLK_DIR}/${DOWNLOAD_FILENAME} ${BLK_DIR}/${IMG_FILENAME}
+}
+download_image(){
+	curl -sSL -o ${TMP_FILE_CRC} ${HTTP_FILENAME_CRC}
+	curl -sSL -o ${TMP_FILENAME} ${HTTP_FILENAME}
+	md5="$(cat ${TMP_FILE_CRC} | cut -f1 -d\ )"
+	filemd5="$(md5sum ${TMP_FILENAME} | cut -f1 -d\ )"
+	if [ "x${md5}" != "x${filemd5}" ]; then
+		echo "Error image checksum"
+		exit 1
+	fi
+}
+connect_image(){
+	valid_dev=""
+	for d in /dev/nbd{0..12}; do
+		if [ -b ${d} ]; then
+			test_dev=$(nbd-client -c ${d})
+			if [ "${test_dev}" == "" ];then
+				valid_dev=${d}
+				break
+			fi
+		fi
+	done
+	if [ -n "${valid_dev}" ]; then
+		nbd-client ${DNSNAME_IMG_HOST} -name ${REGISTERED_IMAGE_NAME} ${valid_dev}
+	fi
+	if [ -z "$(nbd-client -c ${valid_dev})" ]; then
+		echo "Error connecting image"
+		exit 1
+	fi
+}
+get_info_nbd_from_image(){
+	query=$1
+	filter=$2
+	for pid in $(lsof 2>/dev/null|grep nbd-client|sed -r 's/\s+/\t/g'|cut -f2|sort|uniq); do
+		cmdline="$(cat /proc/$pid/cmdline|xargs -0)"
+		fullinfo="$(echo $pid $cmdline|sed -r 's/\s+/\t/g')"
+		nfields=$(echo $fullinfo|wc -w)
+		if [ -n "$filter" ]; then
+			if [ -z "$(echo $fullinfo|grep $filter)" ];then
+				continue
+			fi
+		fi
+		imgname=""
+		dev=""
+		for num in $(seq 3 $nfields); do
+			field=$(echo $fullinfo|sed -r 's/\s+/\t/g'|cut -f$num)
+			if [ "$field" = "-N" -o "$field" = "-name" ];then
+				nadd=$(($num+1))
+				imgname="$(echo $fullinfo|sed -r 's/\s+/\t/g'|cut -f$nadd)"
+			fi
+			if [ "/dev/nbd" = "$(echo $field|cut -c -8)" ];then
+				dev=$field
+			fi
+		done
+		case $query in
+			pid)
+				ret="$pid"
+			;;
+			server)
+				ret="$(echo $fullinfo|cut -f3)"
+			;;
+			name)
+				ret="$imgname"
+			;;
+			dev)
+				ret="$dev"
+			;;
+			*)
+			;;
+		esac
+		if [ -n "$ret" ]; then
+			echo $ret
+		fi
+	done
+}
+disconnect_image(){
+	dev="$(get_info_nbd_from_image $REGISTERED_IMAGE_NAME dev)"
+	if [ -z "$dev" ];then
+		echo "Image not connected"
+		exit 1
+	fi
+	nbd-client -d $dev
+}
+mount_image(){
+	dev="$(get_info_nbd_from_image $REGISTERED_IMAGE_NAME dev)"
+	if [ -z "$(findmnt -nr|sed -r 's/\s+/\t/g'|cut -f1|grep '/var/lib/docker')" ]; then
+		mount $dev /var/lib/docker
+	else
+		echo "Path is already mounted"
+		exit 1
+	fi
+}
+umount_image(){
+	if [ -n "$(findmnt -nr|sed -r 's/\s+/\t/g'|cut -f1|grep '/var/lib/docker')" ]; then
+		kill_docker_daemon
+		umount -l $dev /var/lib/docker
+	else
+		echo "Path is not mounted"
+		exit 1
+	fi
+}
+kill_docker_daemon(){
+	systemctl stop docker
+	p="$(pidof dockerd)"
+	if [ -n "$p" ]; then
+		kill -9 $p
+	fi
+}
+start_docker_daemon(){
+	systemctl start docker
+	p="$(pidof dockerd)"
+	if [ -z "$p" ]; then
+		systemctl start docker
+		p="$(pifof dockerd)"
+		if [ -z "$p" ]; then
+			echo "Unable to start dockerd through systemd, try to exec dockerd as root and see logs"
+			exit 1
+		fi
+	fi
+}
+
+if [ $# -eq 0 ]; then
+	echo "Need operational parameters"
+	exit 1
+fi
+if [ $UID != 0 ]; then
+	echo "Need root permission"
+	exit 1
+fi
+
+# TODO: CHECK SEMI OR ABORT FOR RUN OPTIONS
+# TODO: CHECK SERVER OR ABORT FOR SERVER OPTIONS
+while [ -n "$1" ]; do
+	operation="$(echo $1 |tr '[:upper:]' '[:lower:]')"
+	case $operation in
+		mount)
+			mount_image
+		;;
+		umount)
+			umount_image
+		;;
+		download)
+			download_image
+		;;
+		connect)
+			connect_image
+		;;
+		disconnect)
+			disconnect_image
+		;;
+		start)
+			start_docker_daemon
+		;;
+		stop)
+			kill_docker_daemon
+		;;
+		prepare)
+			prepare_blkdir
+		;;
+		move)
+			move_image_to_blkdir
+		;;
+		info)
+			get_info_nbd_from_image $2 $3
+			shift
+			shift
+		;;
+		install-server)
+			download_image
+			prepare_blkdir
+			move_image_to_blkdir
+			echo_nbd_server_conf > /etc/nbd-server/conf.d/${REGISTERED_IMAGE_NAME}.conf
+		;;
+		run-semi)
+			echo TODO
+		;;
+		echo-server-conf)
+			echo_nbd_server_conf
+		;;
+		*)
+			echo "Not implemented"
+			exit 1
+		;;
+	esac
+	shift
+done
+exit 0
+

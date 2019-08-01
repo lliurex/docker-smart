@@ -1,3 +1,0 @@
-lib/udev/rules.d/* lib/udev/rules.d/
-usr/sbin/* usr/sbin/
-usr/src/* usr/src/
