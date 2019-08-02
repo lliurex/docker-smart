@@ -1,14 +1,14 @@
 [Unit]
 Description=Lliurex Smart Docker environment
 Before=containerd.service
-BindsTo=containerd.service nbd-server.service nbd-server.service
-After=network-online.target firewalld.service nbd-server.service
+BindsTo=containerd.service
+After=network-online.target firewalld.service graphical.target
 Wants=network-online.target
 
 [Service]
 Type=forking
-ExecStart=/usr/bin/lliurex-smart-nbd mount
-
+ExecStart=/usr/sbin/nbd-lliurex-smart run-semi
+ExecStop=/usr/sbin/nbd-lliurex-smart end-semi
 #ExecReload=/bin/kill -s HUP $MAINPID
 #TimeoutSec=0
 #RestartSec=2

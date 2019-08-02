@@ -49,6 +49,10 @@ download_image(){
 }
 connect_image(){
 	valid_dev=""
+	if [ -n "$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)" ]; then
+		echo "Image currently connected"
+		exit 1
+	fi
 	for d in /dev/nbd{0..12}; do
 		if [ -b ${d} ]; then
 			test_dev=$(nbd-client -c ${d})
@@ -112,7 +116,7 @@ get_info_nbd_from_image(){
 	done
 }
 disconnect_image(){
-	dev="$(get_info_nbd_from_image $REGISTERED_IMAGE_NAME dev)"
+	dev="$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)"
 	if [ -z "$dev" ];then
 		echo "Image not connected"
 		exit 1
@@ -120,7 +124,12 @@ disconnect_image(){
 	nbd-client -d $dev
 }
 mount_image(){
-	dev="$(get_info_nbd_from_image $REGISTERED_IMAGE_NAME dev)"
+	dev="$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)"
+	if [ -z "$dev" ]; then
+		echo "Image not connected, unable to mount"
+		exit 1
+	fi
+	dev="$(echo $dev|sed -r 's/\s+/\t/g'|cut -f1)"
 	if [ -z "$(findmnt -nr|sed -r 's/\s+/\t/g'|cut -f1|grep '/var/lib/docker')" ]; then
 		mount $dev /var/lib/docker
 	else
@@ -155,6 +164,9 @@ start_docker_daemon(){
 			exit 1
 		fi
 	fi
+}
+restart_nbd_server(){
+	systemctl restart nbd-server
 }
 
 if [ $# -eq 0 ]; then
@@ -208,9 +220,18 @@ while [ -n "$1" ]; do
 			prepare_blkdir
 			move_image_to_blkdir
 			echo_nbd_server_conf > /etc/nbd-server/conf.d/${REGISTERED_IMAGE_NAME}.conf
+			restart_nbd_server
 		;;
 		run-semi)
-			echo TODO
+			connect_image
+			mount_image
+			kill_docker_daemon
+			start_docker_daemon
+		;;
+		end-semi)
+			kill_docker_daemon
+			umount_image
+			disconnect_image
 		;;
 		echo-server-conf)
 			echo_nbd_server_conf
