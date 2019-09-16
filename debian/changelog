@@ -1,3 +1,9 @@
+lliurex-smart-ltsp (0.2) bionic; urgency=medium
+
+  * Changed download path & server location
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Mon, 16 Sep 2019 12:56:40 +0200
+
 lliurex-smart-ltsp (0.1) bionic; urgency=medium
 
   * Initial Release.

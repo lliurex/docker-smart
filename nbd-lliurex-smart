@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ## START EDITABLE VARS
-DOWNLOAD_HOST=http://172.20.8.6/
+DOWNLOAD_HOST=http://lliurex.net
 DNSNAME_IMG_HOST=server
-DOWNLOAD_PATH=/
+DOWNLOAD_PATH=recursos
 DOWNLOAD_FILENAME=fs-smart
 REGISTERED_IMAGE_NAME=lliurex-smart-nbd
 BLK_DIR=/opt/ltsp/blockdev
