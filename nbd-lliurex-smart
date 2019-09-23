@@ -24,11 +24,13 @@ echo_nbd_server_conf(){
 	echo "copyonwrite = true"
 }
 prepare_blkdir(){
+	echo "Preparing blockdir...";
 	mkdir -p ${BLK_DIR}
 	chown root:nbd ${BLK_DIR}
 	chmod 1775 ${BLK_DIR}
 }
 move_image_to_blkdir(){
+	echo "Preparing image into right place...";
 	if [ ! -d ${BLK_DIR} ]; then
 		echo "Directory '${BLK_DIR}' not found"
 		exit 1
@@ -38,16 +40,33 @@ move_image_to_blkdir(){
 	mv ${BLK_DIR}/${DOWNLOAD_FILENAME} ${BLK_DIR}/${IMG_FILENAME}
 }
 download_image(){
-	curl -sSL -o ${TMP_FILE_CRC} ${HTTP_FILENAME_CRC}
-	curl -sSL -o ${TMP_FILENAME} ${HTTP_FILENAME}
+	echo "Downloading image.... (Note: you can avoid this process putting correct file into /tmp)";
+	if [ ! -f "${TMP_FILE_CRC}" ]; then
+		curl --progress-bar -SL -o ${TMP_FILE_CRC} ${HTTP_FILENAME_CRC}
+	fi
+	if [ ! -f "${TMP_FILENAME}" ]; then
+		curl --progress-bar -SL -o ${TMP_FILENAME} ${HTTP_FILENAME}
+	fi
+		
 	md5="$(cat ${TMP_FILE_CRC} | cut -f1 -d\ )"
 	filemd5="$(md5sum ${TMP_FILENAME} | cut -f1 -d\ )"
 	if [ "x${md5}" != "x${filemd5}" ]; then
 		echo "Error image checksum"
-		exit 1
+		echo -n "Retry download? y/N "
+		read resp
+		if [ "x$resp" = "xy" -o "x$resp" = "xY" ]; then
+			rm -f "${TMP_FILE_CRC}"
+			rm -f "${TMP_FILENAME}"
+			download_image
+		else
+			exit 1
+		fi
+	else
+		echo "Checksum OK!"
 	fi
 }
 connect_image(){
+	echo "Linking image...";
 	valid_dev=""
 	if [ -n "$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)" ]; then
 		echo "Image currently connected"
@@ -116,6 +135,7 @@ get_info_nbd_from_image(){
 	done
 }
 disconnect_image(){
+	echo "Unlinking image...";
 	dev="$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)"
 	if [ -z "$dev" ];then
 		echo "Image not connected"
@@ -124,6 +144,7 @@ disconnect_image(){
 	nbd-client -d $dev
 }
 mount_image(){
+	echo "Mounting image into filesystem...";
 	dev="$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)"
 	if [ -z "$dev" ]; then
 		echo "Image not connected, unable to mount"
@@ -138,6 +159,7 @@ mount_image(){
 	fi
 }
 umount_image(){
+	echo "Unmounting image from filesystem...";
 	if [ -n "$(findmnt -nr|sed -r 's/\s+/\t/g'|cut -f1|grep '/var/lib/docker')" ]; then
 		kill_docker_daemon
 		umount -l $dev /var/lib/docker
@@ -147,6 +169,7 @@ umount_image(){
 	fi
 }
 kill_docker_daemon(){
+	echo "Stopping docker daemon...";
 	systemctl stop docker
 	p="$(pidof dockerd)"
 	if [ -n "$p" ]; then
@@ -154,6 +177,7 @@ kill_docker_daemon(){
 	fi
 }
 start_docker_daemon(){
+	echo "Starting docker daemon...";
 	systemctl start docker
 	p="$(pidof dockerd)"
 	if [ -z "$p" ]; then
@@ -166,17 +190,26 @@ start_docker_daemon(){
 	fi
 }
 restart_nbd_server(){
+	echo "Restarting nbd server...";
 	systemctl restart nbd-server
+}
+
+help(){
+	echo -e '\n Available options (recommended usage):\n ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n "install-server" : Configures a server to allow semi-light clients run smart software\n "run-semi" : Start service into semi-light environment\n "end-semi" : Stop service into semi-light environment\n\n Available options (advanced or manual usage):\n ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n "mount" : mount docker runtime dir\n "umount" : unmount docker runtime dir\n "download" : download docker runtime filesystem image\n "connect" : connect nbd client to server\n "disconnect" : disconnect nbd client from server\n "start" : starts docker daemon\n "stop" : stops docker daemon\n "prepare" : Setups blockdir to store filesystem image into server\n "move" : move downloaded image into blockdir\n "info" : get info querying nbd-client [pid|server|name|dev] [STRING_FILTER]\n "echo-server-conf" : prints nbd server configuration\n'
 }
 
 if [ $# -eq 0 ]; then
 	echo "Need operational parameters"
+	help
 	exit 1
 fi
-if [ $UID != 0 ]; then
-	echo "Need root permission"
-	exit 1
-fi
+
+need_root(){
+    if [ $UID != 0 ]; then
+	    echo "Need root permission"
+	    exit 1
+    fi
+}   
 
 # TODO: CHECK SEMI OR ABORT FOR RUN OPTIONS
 # TODO: CHECK SERVER OR ABORT FOR SERVER OPTIONS
@@ -184,38 +217,48 @@ while [ -n "$1" ]; do
 	operation="$(echo $1 |tr '[:upper:]' '[:lower:]')"
 	case $operation in
 		mount)
+			need_root
 			mount_image
 		;;
 		umount)
+			need_root
 			umount_image
 		;;
 		download)
 			download_image
 		;;
 		connect)
+			need_root
 			connect_image
 		;;
 		disconnect)
+			need_root
 			disconnect_image
 		;;
 		start)
+			need_root
 			start_docker_daemon
 		;;
 		stop)
+			need_root
 			kill_docker_daemon
 		;;
 		prepare)
+			need_root
 			prepare_blkdir
 		;;
 		move)
+			need_root
 			move_image_to_blkdir
 		;;
 		info)
+			need_root
 			get_info_nbd_from_image $2 $3
 			shift
 			shift
 		;;
 		install-server)
+			need_root
 			download_image
 			prepare_blkdir
 			move_image_to_blkdir
@@ -223,12 +266,14 @@ while [ -n "$1" ]; do
 			restart_nbd_server
 		;;
 		run-semi)
+			need_root
 			connect_image
 			mount_image
 			#kill_docker_daemon
 			#start_docker_daemon
 		;;
 		end-semi)
+			need_root
 			kill_docker_daemon
 			umount_image
 			disconnect_image
@@ -238,6 +283,7 @@ while [ -n "$1" ]; do
 		;;
 		*)
 			echo "Not implemented"
+			help
 			exit 1
 		;;
 	esac

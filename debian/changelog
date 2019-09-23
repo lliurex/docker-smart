@@ -1,3 +1,13 @@
+lliurex-smart-ltsp (0.3) bionic; urgency=medium
+
+  * Download progress bar is shown
+  * Help menu
+  * Increased verbosity
+  * Test downloaded image allowing to skip download
+  * Reviewed run permissions
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Mon, 23 Sep 2019 12:42:47 +0200
+
 lliurex-smart-ltsp (0.2) bionic; urgency=medium
 
   * Changed download path & server location
