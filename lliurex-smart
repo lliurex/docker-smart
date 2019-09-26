@@ -477,7 +477,7 @@ def check_nwfermi():
 			logging.error('Unable to load nw_fermi module, maybe is not installed?')
 	if nwfermi_available():
 		start_namedev = 'nwfermi'
-		nwfermi_devs = [d for x in os.listdir('/dev') if x[:len(start_namedev)] == start_namedev ]
+		nwfermi_devs = [x for x in os.listdir('/dev') if x[:len(start_namedev)] == start_namedev ]
 		if (len(nwfermi_devs) > 0):
 			return True
 		else:
