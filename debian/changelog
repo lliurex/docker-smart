@@ -1,3 +1,9 @@
+lliurex-smart-ltsp (0.4) bionic; urgency=medium
+
+  * Fix: Create docker libdir if not exists
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Fri, 27 Sep 2019 11:43:50 +0200
+
 lliurex-smart-ltsp (0.3) bionic; urgency=medium
 
   * Download progress bar is shown

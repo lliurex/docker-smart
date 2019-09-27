@@ -150,6 +150,7 @@ mount_image(){
 		echo "Image not connected, unable to mount"
 		exit 1
 	fi
+	mkdir -p /var/lib/docker
 	dev="$(echo $dev|sed -r 's/\s+/\t/g'|cut -f1)"
 	if [ -z "$(findmnt -nr|sed -r 's/\s+/\t/g'|cut -f1|grep '/var/lib/docker')" ]; then
 		mount $dev /var/lib/docker
