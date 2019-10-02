@@ -1,3 +1,9 @@
+nwfermi-module (0.6.5.1-0+lliurex3) bionic; urgency=medium
+
+  * Fix kernel location path avoiding unnecessary rebuilds
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Wed, 02 Oct 2019 13:15:44 +0200
+
 nwfermi-module (0.6.5.1-0+lliurex2) bionic; urgency=medium
 
   * Make multi-package

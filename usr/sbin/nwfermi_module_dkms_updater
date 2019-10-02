@@ -9,15 +9,16 @@
 DKMS=`dkms --version | cut -f2 -d"."`
 VERNWF=0.6.5.1
 KERNEL=`uname -r`
-if [ -e /lib/modules/$KERNEL/updates/dkms/nw-fermi.ko ]; then
+DRV_PATH="/lib/modules/$KERNEL/drivers/input/nw-fermi/nw-fermi.ko"
+if [ -e "$DRV_PATH" ]; then
 	MAGIC=`modinfo nw_fermi | grep $KERNEL | grep vermagic`
 	if [ "$MAGIC" = "" ]; then
 		echo "Deleting wrong module"
-		rm -f /lib/modules/$KERNEL/updates/dkms/nw-fermi.ko
+		rm -f "$DRV_PATH"
 	fi 	
 fi
 
-if [ ! -e /lib/modules/$KERNEL/updates/dkms/nw-fermi.ko ]; then
+if [ ! -e "$DRV_PATH" ]; then
 	echo "Rebuilding module for current kernel version"
 
 	if [ "$DKMS" = "1" ]; then
