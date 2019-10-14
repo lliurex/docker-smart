@@ -1,4 +1,5 @@
 FROM lliurex/lliurex-smart:1.0
 MAINTAINER M.Angel Juan <m.angel.juan@gmail.com>
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+COPY ./conffiles/SMART* /etc/xdg/
 ENTRYPOINT [ "/docker-entrypoint.sh" ]

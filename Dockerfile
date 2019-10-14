@@ -13,4 +13,5 @@ RUN install -d -m755 -o pulse -g pulse /run/pulse
 RUN mkdir /var/run/dbus && chown messagebus:messagebus /var/run/dbus/
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 COPY ./sw/decompressed/data/usr/sbin/nwfermi_daemon* /usr/sbin/
+COPY ./conffiles/SMART* /etc/xdg/
 ENTRYPOINT [ "/docker-entrypoint.sh" ]
