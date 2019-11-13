@@ -1,5 +1,6 @@
-FROM lliurex/lliurex-smart:1.0
+FROM lliurex/lliurex-smart:1.1
 MAINTAINER M.Angel Juan <m.angel.juan@gmail.com>
+RUN apt-get install nano screen
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 COPY ./conffiles/SMART* /etc/xdg/
 ENTRYPOINT [ "/docker-entrypoint.sh" ]

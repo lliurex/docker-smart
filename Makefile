@@ -7,6 +7,8 @@ VIDEO_OPTS := $(subst __COLON__,:,-v /tmp/.X11-unix__COLON__/tmp/.X11-unix -e DI
 RUNOPTS := --rm --privileged -d
 #REPO := $(subst __COLON__,:,http__COLON__//172.20.8.6/llx16-debmirror)
 
+DATE := $(shell date +%d_%m_%Y)
+
 IMAGE_LIST := $(shell docker images -q)
 CONTAINER_LIST := $(shell docker ps -a -q)
 
@@ -24,10 +26,10 @@ endif
 
 build_latest:
 	@echo Building latest
-	docker build --rm=false --tag $(VERSION) -f Dockerfile-latest .
-	docker rmi lliurex/lliurex-smart
-	docker tag $(VERSION) lliurex/lliurex-smart
-	@echo DONE! Image tagged as '$(VERSION)' and lliurex/lliurex-smart
+	docker build --rm=false --tag $(VERSION):build_on_$(DATE) -f Dockerfile-latest .
+#	docker rmi lliurex/lliurex-smart
+#	docker tag $(VERSION) lliurex/lliurex-smart
+	@echo DONE! Image tagged as '$(VERSION):build_on_$(DATE)'
 
 run : .build
 	@echo Running
