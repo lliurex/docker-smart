@@ -26,6 +26,8 @@ override_dh_install:
 	install -m 0755 zz-lliurex-smart.desktop debian/lliurex-smart/usr/share/applications/
 	mkdir -p debian/lliurex-smart/usr/bin/
 	install -m 0755 lliurex-smart debian/lliurex-smart/usr/bin/
+	mkdir -p debian/lliurex-smart/usr/share/polkit-1/actions/
+	install -m 0755 net.lliurex.docker.policy debian/lliurex-smart/usr/share/polkit-1/actions/
 # dh_make generated override targets
 # This is example for Cmake (See https://bugs.debian.org/641051 )
 #override_dh_auto_configure:
