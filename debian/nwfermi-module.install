@@ -1,3 +1,4 @@
-lib/udev/rules.d/* lib/udev/rules.d/
+lib/udev/rules.d/40-nw-fermi.rules lib/udev/rules.d/40-nw-fermi.rules
 usr/sbin/* usr/sbin/
 usr/src/* usr/src/
+usr/file/nw-fermi.c usr/src/nwfermi-0.6.5.1/

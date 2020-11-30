@@ -2,7 +2,7 @@ Source: nwfermi-module
 Section: utils
 Priority: optional
 Maintainer: M.Angel Juan <m.angel.juan@gmail.com>
-Build-Depends: debhelper (>= 10), init-system-helpers
+Build-Depends: debhelper (>= 10), init-system-helpers, binutils-i686-linux-gnu
 Standards-Version: 4.1.2
 Homepage: <insert the upstream URL, if relevant>
 #Vcs-Git: https://anonscm.debian.org/git/collab-maint/nwfermi-module.git
@@ -14,8 +14,22 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, init-system-helpers, dkms
 Description: nwfermi module for smart-board 480 
  nwfermi standalone module (without usermode binary) intended to use with docker image
 
+Package: nwfermi-module-host
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, init-system-helpers, dkms, nwfermi-daemon ( >= 0.6.5.1-0+lliurex5 )
+Provides: nwfermi-module
+Description: nwfermi module for smart-board 480 
+ nwfermi standalone module (with usermode binary) intended to use in host system
+
+Package: nwfermi-module-host-copia
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, init-system-helpers, dkms, nwfermi-daemon ( >= 0.6.5.1-0+lliurex5 )
+Provides: nwfermi-module
+Description: nwfermi module for smart-board 480 
+ nwfermi standalone module (with usermode binary) intended to use in host system
+
 Package: nwfermi-daemon
-Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libc6-i386 [!i386]
 Description: nwfermi module for smart-board 480 
  nwfermi daemon binary intended to use with docker image

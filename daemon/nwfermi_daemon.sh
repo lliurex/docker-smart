@@ -27,23 +27,42 @@
 
 # Se elimina la instancia que haya de "nwfermi_daemon" por si en algún caso
 # se ha podido ejecutar por ".SMARTBoardService_elf" u otro caso.
-killall nwfermi_daemon
+##killall nwfermi_daemon
 # Se muestran los parámetros que le pasa el servicio nwfermi.service aunque
 # realmente no se usan en este script, finalmente la instancia se averigua
 # por el nombre del dispositivo /dev/nwfermi? pero también valdría utilizar
 # la que se pasa por parámetro.
-echo "$(date) Parametros de entrada: $@" >> /tmp/nwfermi_daemon.sh.log
+# echo "$(date) Parametros de entrada: $@" >> /tmp/nwfermi_daemon.sh.log
 # Se guarda el número que sirve como "instanceid"
-IID=$(ls -1 /dev/nwfermi* | head -n 1 | sed "s,/dev/nwfermi,,")
-if [ ! -z "$IID" ] ; then
-   echo Ejecutando nwfermi_daemon /instanceid $IID >> /tmp/nwfermi_daemon.sh.log
-   # "nwfermi_daemon" es bloqueante, hay que ejecutarlo en segundo plano para
-   # devuelva el control a systemd si no lo elimina por timeout.
-   nwfermi_daemon /instanceid $IID &
-   sleep 2
-   # Se elimina la instancia de ".SMARTBoardService_elf" pero el servicio
-   # /usr/lib/systemd/user/smartboar.service la vuelve a cargar, así se
-   # sincroniza con la nueva ejecución de nwfermi_daemon.
-   killall .SMARTBoardService_elf
-fi
+
+DEBUG_FILE=/tmp/nwfermi_daemon.sh.log
+:> $DEBUG_FILE
+exit_now=0
+exitting(){
+    echo "---- exit signal for nwfermi_daemon.sh ----" >> $DEBUG_FILE
+    pkill -9 nwfermi_daemon
+    exit_now=1
+}
+trap exitting SIGINT
+trap exitting SIGTERM
+trap exitting SIGQUIT
+
+while [ $exit_now -ne 1 ];do 
+    IID=$(ls -1 /dev/nwfermi* 2>/dev/null| head -n 1 | sed "s,/dev/nwfermi,,")
+    if [ -z "$IID" ];then
+        echo -n "." >> /tmp/nwfermi_daemon.sh.log
+    fi
+    if [ ! -z "$IID" -a -z "$(pgrep -x nwfermi_daemon)" ] ; then
+        echo Executing nwfermi_daemon /instanceid $IID >> $DEBUG_FILE
+        echo "---- startlog nwfermi_daemon output ----" >> $DEBUG_FILE
+        nwfermi_daemon /daemon /instanceid $IID > $DEBUG_FILE 2>&1 
+        echo "---- endlog nwfermi_daemon output ----" >> $DEBUG_FILE
+        sleep 2
+        # Se elimina la instancia de ".SMARTBoardService_elf" pero el servicio
+        # /usr/lib/systemd/user/smartboar.service la vuelve a cargar, así se
+        # sincroniza con la nueva ejecución de nwfermi_daemon.
+        pkill -9 -f .SMARTBoardService_elf
+    fi
+    sleep 10
+done;
 exit 0
