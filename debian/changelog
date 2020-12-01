@@ -1,3 +1,9 @@
+lliurex-smart (1.0.1+nmu1) bionic; urgency=medium
+
+  * Mount /dev devices inside container
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Tue, 01 Dec 2020 09:21:49 +0100
+
 lliurex-smart (1.0.1) bionic; urgency=medium
 
   * Fix nwfermi detection bug
