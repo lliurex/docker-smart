@@ -1,0 +1,17 @@
+#!/bin/bash
+
+exitting=""
+exit_now(){
+    exitting=yes
+    pkill -9 -f .SMARTBoardService_elf
+}
+
+trap exit_now SIGQUIT
+trap exit_now SIGINT
+trap exit_now SIGTERM
+
+while [ -z "$exitting" -a -z "$(pgrep -f .SMARTBoardService_elf)" ];do
+    echo Starting service
+    /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMARTBoardService_elf
+    sleep 1
+done
