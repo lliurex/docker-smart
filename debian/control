@@ -19,14 +19,14 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, init-system-helpers, dkms, nwfermi-daemon ( >= 0.6.5.1-0+lliurex5 )
 Provides: nwfermi-module
 Description: nwfermi module for smart-board 480 
- nwfermi standalone module (with usermode binary) intended to use in host system
+ nwfermi standalone module (with usermode binary) intended to use in host system as multitouch device
 
-Package: nwfermi-module-host-copia
+Package: nwfermi-module-host-pointer
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, init-system-helpers, dkms, nwfermi-daemon ( >= 0.6.5.1-0+lliurex5 )
 Provides: nwfermi-module
 Description: nwfermi module for smart-board 480 
- nwfermi standalone module (with usermode binary) intended to use in host system
+ nwfermi standalone module (with usermode binary) intended to use in host system as mouse system
 
 Package: nwfermi-daemon
 Architecture: any

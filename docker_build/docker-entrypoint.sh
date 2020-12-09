@@ -11,7 +11,6 @@ if [ -z "$GROUP" -o -z "$GID" ]; then
     USER_SUPPORT=0
 fi
 SERVICES="/bin/dbus-uuidgen --ensure;/bin/dbus-daemon --system --fork;/usr/bin/pulseaudio --system --daemonize --high-priority --log-target=syslog --disallow-exit --disallow-module-loading=1"
-screen -S nwfermi -d -m bash /usr/sbin/nwfermi_daemon.sh
 rm -f /var/run/dbus/pid > /dev/null 2>&1
 sleep 1
 IFS=';'
@@ -27,7 +26,12 @@ if [ ! $USER_SUPPORT ]; then
     fi
 fi
 export LANG=es_ES.UTF-8
-screen -S service -d -m bash /usr/sbin/sm-service &
+screen -S service -d -m bash /usr/sbin/sm-service
+sleep 5
+screen -S nwfermi -d -m bash /usr/sbin/nwfermi_daemon.sh
+sleep 5
+pkill -9 -x nwfermi_daemon
+sleep 3
 /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMART\ Board\ Tools_elf
 if [ ! $USER_SUPPORT ];then
     chown -R $USER:$GROUP /home/${USER} || true

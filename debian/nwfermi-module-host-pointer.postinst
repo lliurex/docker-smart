@@ -22,7 +22,7 @@ set -e
 # the debian-policy package
 
 
-PKGVER=`dpkg-query -W -f='${Version}' nwfermi-module-host-copia | awk -F "-" '{print $1}'`
+PKGVER=`dpkg-query -W -f='${Version}' nwfermi-module-host-pointer | awk -F "-" '{print $1}'`
 PKGVER=${PKGVER#*:}
 
 SOURCES=/var/lib/dkms/nwfermi/
@@ -61,7 +61,7 @@ case "$1" in
 		dkms install -m nwfermi -v $PKGVER > /dev/null
 		echo "Done."
                 systemctl daemon-reload
-                systemctl enable nwfermi-module-host-copia.service
+                systemctl enable nwfermi-module-host-pointer.service
                 systemctl enable nwfermi@.service
                 /usr/sbin/nwfermi-trigger-udev-changes
     ;;

@@ -29,7 +29,7 @@ case "$1" in
 		echo "Removing all DKMS Modules"
 		dkms remove -m nwfermi -v $PKGVER --all > /dev/null
 		echo "Done."
-                systemctl disable nwfermi-module.service
+                systemctl disable nwfermi-module-host.service
                 systemctl disable nwfermi@.service
     ;;
 

@@ -21,7 +21,7 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-PKGVER=`dpkg-query -W -f='${Version}' nwfermi-module | awk -F "-" '{print $1}'`
+PKGVER=`dpkg-query -W -f='${Version}' nwfermi-module-host-pointer | awk -F "-" '{print $1}'`
 PKGVER=${PKGVER#*:}
 
 case "$1" in
@@ -29,8 +29,8 @@ case "$1" in
 		echo "Removing all DKMS Modules"
 		dkms remove -m nwfermi -v $PKGVER --all > /dev/null
 		echo "Done."
-                systemctl disable nwfermi-module.service
-                systemctl disaable nwfermi@.service
+                systemctl disable nwfermi-module-host-pointer.service
+                systemctl disable nwfermi@.service
     ;;
 
     failed-upgrade)
