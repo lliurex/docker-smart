@@ -1,17 +1,16 @@
 #!/bin/bash
 set -e
-set -x
+#set -x
+USER_SUPPORT=1
 if [ -z "$USER" -o -z "$UID" ]; then
     echo "USER NOT DEFINED"
-    exit 1
+    USER_SUPPORT=0
 fi
 if [ -z "$GROUP" -o -z "$GID" ]; then
     echo "GROUP NOT DEFINED"
-    exit 1
+    USER_SUPPORT=0
 fi
 SERVICES="/bin/dbus-uuidgen --ensure;/bin/dbus-daemon --system --fork;/usr/bin/pulseaudio --system --daemonize --high-priority --log-target=syslog --disallow-exit --disallow-module-loading=1"
-#rm -rf /tmp/*
-screen -d -m bash /usr/sbin/nwfermi_daemon.sh
 rm -f /var/run/dbus/pid > /dev/null 2>&1
 sleep 1
 IFS=';'
@@ -19,15 +18,21 @@ for s in $SERVICES; do
     echo $s
     bash -c $s &
 done
-addgroup --quiet --gid ${GID} ${GROUP} || true
-adduser  --quiet --home /home/${USER} --shell /bin/false --gecos "UserAccount" --uid ${UID} --ingroup ${GROUP} --disabled-password --disabled-login ${USER} || true
-if [ ! -L '/root/lliurex-smart-storage' ]; then
-    ln -s /home/${USER} /root/lliurex-smart-storage || true
+if [ ! $USER_SUPPORT ]; then
+    addgroup --quiet --gid ${GID} ${GROUP} || true
+    adduser  --quiet --home /home/${USER} --shell /bin/false --gecos "UserAccount" --uid ${UID} --ingroup ${GROUP} --disabled-password --disabled-login ${USER} || true
+    if [ ! -L '/root/lliurex-smart-storage' ]; then
+        ln -s /home/${USER} /root/lliurex-smart-storage || true
+    fi
 fi
 export LANG=es_ES.UTF-8
-screen -d -m /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMARTBoardService_elf &
+screen -S service -d -m bash /usr/sbin/sm-service
+sleep 5
+screen -S nwfermi -d -m bash /usr/sbin/nwfermi_daemon.sh
+sleep 5
+pkill -9 -x nwfermi_daemon
+sleep 3
 /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMART\ Board\ Tools_elf
-chown -R $USER:$GROUP /home/${USER} || true
-
-# Config has root perms
-#chown -R $USER:$GROUP /root || true
+if [ ! $USER_SUPPORT ];then
+    chown -R $USER:$GROUP /home/${USER} || true
+fi
