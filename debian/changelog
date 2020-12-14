@@ -1,4 +1,4 @@
-nwfermi-module (0.6.5.1-0+lliurex5) focal; urgency=medium
+nwfermi-module (0.6.5.1-0+lliurex5) bionic; urgency=medium
 
   * Fix udev rules
   * Add -host* builds
