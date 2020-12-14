@@ -1,0 +1,5 @@
+lib/udev/rules.d/40-nw-fermi-host.rules lib/udev/rules.d/
+usr/sbin/* usr/sbin/
+usr/src/* usr/src/
+usr/file/nw-fermi.c usr/src/nwfermi-0.6.5.1/
+etc/systemd/system/nwfermi@.service lib/systemd/system/
