@@ -30,7 +30,7 @@ screen -S service -d -m bash /usr/sbin/sm-service
 sleep 5
 screen -S nwfermi -d -m bash /usr/sbin/nwfermi_daemon.sh
 sleep 5
-pkill -9 -x nwfermi_daemon
+pkill -9 -x nwfermi_daemon || true
 sleep 3
 /opt/SMART\ Technologies/SMART\ Product\ Drivers/bin/.SMART\ Board\ Tools_elf
 if [ ! $USER_SUPPORT ];then
