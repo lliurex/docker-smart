@@ -1,3 +1,9 @@
+lliurex-smart (1.0.2.1) bionic; urgency=medium
+
+  * switch to official image 
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Mon, 14 Dec 2020 13:10:27 +0100
+
 lliurex-smart (1.0.2) bionic; urgency=medium
 
   * Mount /dev devices inside container

@@ -11,7 +11,7 @@ import argparse
 import time
 import threading
 
-IMAGE_NAME='mijunalo/lliurex-smart:latest'
+IMAGE_NAME='lliurex/lliurex-smart:latest'
 CONTAINER_NAME='smart'
 MAIN_STORAGE_NAME="lliurex-smart-storage"
 CONFIG_STORAGE_NAME="lliurex-smart-config"
