@@ -196,7 +196,7 @@ def get_all_container_id():
 		if out:
 			for container in out:
 				container_name, container_id, image_name = container.split('$')
-				if 'lliurex' in container_name and 'lliurex-smart' in image_name:
+				if 'smart' in container_name and 'lliurex-smart' in image_name:
 					tmp.append(container_id)
 			out = tmp
 	except Exception as e:
