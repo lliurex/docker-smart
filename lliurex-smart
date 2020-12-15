@@ -186,12 +186,19 @@ def remove_image():
 def get_all_container_id():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-	ret,out = execute("docker ps -a -q -f=ancestor={}".format(get_image_name()))
+	ret,out = execute("docker ps -a --format '{{.Names}}${{.ID}}${{.Image}}'")
 	if ret != 0:
 		logging.error('Error getting container ids, error is: {}'.format(out))
 		return False
 	try:
+		tmp = []
 		out = out.strip().split()
+		if out:
+			for container in out:
+				container_name, container_id, image_name = container.split('$')
+				if 'lliurex' in container_name and 'lliurex-smart' in image_name:
+					tmp.append(container_id)
+			out = tmp
 	except Exception as e:
 		logging.warning("Error stripping '{}', error is: {}".format(out,e))
 		out = None
@@ -204,7 +211,7 @@ def remove_all():
 	if not ids:
 		logging.warning("Containers not detected, skipping container removal")
 	else:
-		ret,out = execute("docker rm -f {} {}".format(get_image_name(),' '.join(ids)))
+		ret,out = execute("docker rm -f {}".format(' '.join(ids)))
 		if ret != 0:
 			out_ids = out.split()
 			same = True
@@ -656,6 +663,7 @@ def stop_software():
 
 if __name__ == '__main__':
 	configure_log()
+	result = remove_all()
 	logging.info("Running as {} ({})".format(current_username,current_uid))
 	parser = argparse.ArgumentParser(description="Lliurex-smart command line tool")
 	parser.add_argument('-debug',action='store_true',help="Debug flag")
