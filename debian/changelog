@@ -1,3 +1,9 @@
+lliurex-smart (1.0.2.3) focal; urgency=medium
+
+  * Fix container name removal
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Tue, 15 Dec 2020 14:15:09 +0100
+
 lliurex-smart (1.0.2.2) focal; urgency=medium
 
   * Better purge for older images
