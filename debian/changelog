@@ -1,3 +1,9 @@
+lliurex-smart (1.0.2.4) bionic; urgency=medium
+
+  * Fix: remove testing code
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Wed, 16 Dec 2020 15:09:41 +0100
+
 lliurex-smart (1.0.2.3) bionic; urgency=medium
 
   * Fix container name removal
