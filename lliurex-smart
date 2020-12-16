@@ -663,7 +663,6 @@ def stop_software():
 
 if __name__ == '__main__':
 	configure_log()
-	result = remove_all()
 	logging.info("Running as {} ({})".format(current_username,current_uid))
 	parser = argparse.ArgumentParser(description="Lliurex-smart command line tool")
 	parser.add_argument('-debug',action='store_true',help="Debug flag")
