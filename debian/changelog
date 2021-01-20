@@ -1,3 +1,9 @@
+nwfermi-module (0.6.5.1-0+lliurex7) bionic; urgency=medium
+
+  * Switch to no-multitouch driver version
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Wed, 20 Jan 2021 14:16:23 +0100
+
 nwfermi-module (0.6.5.1-0+lliurex6) bionic; urgency=medium
 
   * Fix prerm
