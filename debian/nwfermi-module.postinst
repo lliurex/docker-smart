@@ -61,7 +61,8 @@ case "$1" in
 		dkms install -m nwfermi -v $PKGVER > /dev/null
 		echo "Done."
                 systemctl daemon-reload
-                systemctl enable nwfermi-module.service
+		systemctl unmask nwfermi-module.service || true
+                systemctl enable nwfermi-module.service || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
