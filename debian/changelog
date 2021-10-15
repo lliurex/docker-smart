@@ -1,3 +1,9 @@
+lliurex-smart-ltsp (0.4.1) bionic; urgency=medium
+
+  * Fix: remove space checking md5
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Fri, 15 Oct 2021 19:28:00 +0200
+
 lliurex-smart-ltsp (0.4) bionic; urgency=medium
 
   * Fix: Create docker libdir if not exists
