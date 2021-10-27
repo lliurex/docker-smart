@@ -28,7 +28,7 @@ PKGVER=${PKGVER#*:}
 SOURCES=/var/lib/dkms/nwfermi/
 VERSION=173.15.13
 STATUS=$(dpkg --compare-versions "$PKGVER" lt "$VERSION" && echo "True" || echo "False")
-
+KERNEL_ALL_VERSION=$(ls /usr/src/|xargs -n1|sed -nr 's/linux-headers-([0-9.-]+generic).*/\1/p')
 case "$1" in
     configure)
 		(udevadm control --reload-rules && udevadm trigger) || true
@@ -56,9 +56,12 @@ case "$1" in
 		echo "driver version= $PKGVER"
 		dkms add -m nwfermi -v $PKGVER > /dev/null
 		echo "Doing initial module build"
-		dkms build -m nwfermi -v $PKGVER > /dev/null
-		echo "Installing initial module"
-		dkms install -m nwfermi -v $PKGVER > /dev/null
+		for k in $KERNEL_ALL_VERSION; do
+		    echo "Building $k..."
+		    dkms build -m nwfermi -v $PKGVER -k $k > /dev/null
+		    echo "Installing $k"
+        	    dkms install -m nwfermi -v $PKGVER -k $k > /dev/null
+		done
 		echo "Done."
                 systemctl daemon-reload
 		systemctl unmask nwfermi-module.service || true
