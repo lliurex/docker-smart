@@ -1,3 +1,9 @@
+nwfermi-module (0.6.5.1-0+lliurex9) bionic; urgency=medium
+
+  * Fix chroot build with distinct kernel version than running
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Wed, 27 Oct 2021 15:59:05 +0200
+
 nwfermi-module (0.6.5.1-0+lliurex8) bionic; urgency=medium
 
   * Fix reinstallation block
