@@ -9,13 +9,13 @@ Vcs-Git: https://github.com/lliurex/docker-smart.git
 
 Package: lliurex-smart-ltsp-client
 Architecture: any
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, nbd-client
 Description: SystemD unit for lliurex-smart
  SystemD unit for initialization tasks allowing to run lliurex-smart on semi-light thin clients
 
 Package: lliurex-smart-ltsp-server
 Architecture: any
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, nbd-server
 Description: Configuration utility to run lliurex-smart on semi-light thin clients
  This utility prepare environment allowing to serve additional image needed to run lliurex-smart on semi-light thin clients
 
