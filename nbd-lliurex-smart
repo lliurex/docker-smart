@@ -10,6 +10,7 @@ BLK_DIR=/opt/ltsp/blockdev
 IMG_FILENAME=nbd-fs-smart.img
 IMAGE_EXT=xz
 CRC_EXT=md5
+FIXED_NBD_DEVICE=9
 
 ## END EDITABLE VARS
 
@@ -17,7 +18,20 @@ HTTP_FILENAME="${DOWNLOAD_HOST}/${DOWNLOAD_PATH}/${DOWNLOAD_FILENAME}.${IMAGE_EX
 HTTP_FILENAME_CRC="${DOWNLOAD_HOST}/${DOWNLOAD_PATH}/${DOWNLOAD_FILENAME}.${CRC_EXT}"
 TMP_FILENAME="/tmp/${DOWNLOAD_FILENAME}.${IMAGE_EXT}"
 TMP_FILE_CRC="/tmp/${DOWNLOAD_FILENAME}.${CRC_EXT}"
+NBD_DEVICE="/dev/nbd$FIXED_NBD_DEVICE"
 
+ensure_module_loaded(){
+	if [ -z "$(lsmod|sed -nr '/^nbd\s+/p')" ];then
+		modprobe nbd
+	fi
+}
+is_linked(){
+	2>&1 nbd-client -c $1 > /dev/null
+	if [ $? -eq 0 ];then
+		return 0
+	fi
+	return 1
+}
 echo_nbd_server_conf(){
 	echo "[${REGISTERED_IMAGE_NAME}]"
 	echo "exportname = ${BLK_DIR}/${IMG_FILENAME}"
@@ -66,73 +80,109 @@ download_image(){
 	fi
 }
 connect_image(){
-	echo "Linking image...";
+	ensure_module_loaded
+	echo "Linking image..."
 	valid_dev=""
-	if [ -n "$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)" ]; then
-		echo "Image currently connected"
-		exit 1
-	fi
-	for d in /dev/nbd{0..12}; do
-		if [ -b ${d} ]; then
-			test_dev=$(nbd-client -c ${d})
-			if [ "${test_dev}" == "" ];then
-				valid_dev=${d}
-				break
-			fi
+	if check_client_alive; then
+		if [ -n "$(get_info_nbd_from_image dev $REGISTERED_IMAGE_NAME)" ]; then
+			echo "Image currently connected"
+			exit 1
 		fi
-	done
+		for d in /dev/nbd{0..12}; do
+			if [ -b ${d} ]; then
+				test_dev=$(nbd-client -c ${d})
+				if [ "${test_dev}" == "" ];then
+					valid_dev=${d}
+					break
+				fi
+			fi
+		done
+	else
+		if is_linked $NBD_DEVICE; then
+			echo "Image currently connected"
+			exit 1
+		else
+			valid_dev=$NBD_DEVICE
+		fi	
+	fi
 	if [ -n "${valid_dev}" ]; then
-		nbd-client ${DNSNAME_IMG_HOST} -name ${REGISTERED_IMAGE_NAME} ${valid_dev}
+		nbd-client ${DNSNAME_IMG_HOST} -name ${REGISTERED_IMAGE_NAME} ${valid_dev} -p
 	fi
 	if [ -z "$(nbd-client -c ${valid_dev})" ]; then
 		echo "Error connecting image"
 		exit 1
 	fi
 }
+check_client_alive(){
+	if [ -n "$(lsof 2>/dev/null|grep nbd-client)" ];then
+		return 0
+	fi
+	return 1
+}
 get_info_nbd_from_image(){
 	query=$1
 	filter=$2
-	for pid in $(lsof 2>/dev/null|grep nbd-client|sed -r 's/\s+/\t/g'|cut -f2|sort|uniq); do
-		cmdline="$(cat /proc/$pid/cmdline|xargs -0)"
-		fullinfo="$(echo $pid $cmdline|sed -r 's/\s+/\t/g')"
-		nfields=$(echo $fullinfo|wc -w)
-		if [ -n "$filter" ]; then
-			if [ -z "$(echo $fullinfo|grep $filter)" ];then
-				continue
+	if check_client_alive; then
+		for pid in $(lsof 2>/dev/null|grep nbd-client|sed -r 's/\s+/\t/g'|cut -f2|sort|uniq); do
+			cmdline="$(cat /proc/$pid/cmdline|xargs -0)"
+			fullinfo="$(echo $pid $cmdline|sed -r 's/\s+/\t/g')"
+			nfields=$(echo $fullinfo|wc -w)
+			if [ -n "$filter" ]; then
+				if [ -z "$(echo $fullinfo|grep $filter)" ];then
+					continue
+				fi
 			fi
-		fi
-		imgname=""
-		dev=""
-		for num in $(seq 3 $nfields); do
-			field=$(echo $fullinfo|sed -r 's/\s+/\t/g'|cut -f$num)
-			if [ "$field" = "-N" -o "$field" = "-name" ];then
-				nadd=$(($num+1))
-				imgname="$(echo $fullinfo|sed -r 's/\s+/\t/g'|cut -f$nadd)"
-			fi
-			if [ "/dev/nbd" = "$(echo $field|cut -c -8)" ];then
-				dev=$field
+			imgname=""
+			dev=""
+			for num in $(seq 3 $nfields); do
+				field=$(echo $fullinfo|sed -r 's/\s+/\t/g'|cut -f$num)
+				if [ "$field" = "-N" -o "$field" = "-name" ];then
+					nadd=$(($num+1))
+					imgname="$(echo $fullinfo|sed -r 's/\s+/\t/g'|cut -f$nadd)"
+				fi
+				if [ "/dev/nbd" = "$(echo $field|cut -c -8)" ];then
+					dev=$field
+				fi
+			done
+			case $query in
+				pid)
+					ret="$pid"
+				;;
+				server)
+					ret="$(echo $fullinfo|cut -f3)"
+				;;
+				name)
+					ret="$imgname"
+				;;
+				dev)
+					ret="$dev"
+				;;
+				*)
+				;;
+			esac
+			if [ -n "$ret" ]; then
+				echo $ret
 			fi
 		done
+	else
 		case $query in
 			pid)
-				ret="$pid"
+				echo "Not available on this system"
 			;;
 			server)
-				ret="$(echo $fullinfo|cut -f3)"
+				echo "Not available on this system"
 			;;
 			name)
-				ret="$imgname"
+				echo "Not available on this system"
 			;;
 			dev)
-				ret="$dev"
+				echo "$NBD_DEVICE"
 			;;
 			*)
+				echo "$NBD_DEVICE"
 			;;
 		esac
-		if [ -n "$ret" ]; then
-			echo $ret
-		fi
-	done
+	fi
 }
 disconnect_image(){
 	echo "Unlinking image...";
@@ -152,7 +202,7 @@ mount_image(){
 	fi
 	mkdir -p /var/lib/docker
 	dev="$(echo $dev|sed -r 's/\s+/\t/g'|cut -f1)"
-	if [ -z "$(findmnt -nr|sed -r 's/\s+/\t/g'|cut -f1|grep '/var/lib/docker')" ]; then
+	if [ -z "$(findmnt -nr|sed -nr '/^\/var\/lib\/docker\s+/p')" ]; then
 		mount $dev /var/lib/docker
 	else
 		echo "Path is already mounted"
@@ -161,7 +211,7 @@ mount_image(){
 }
 umount_image(){
 	echo "Unmounting image from filesystem...";
-	if [ -n "$(findmnt -nr|sed -r 's/\s+/\t/g'|cut -f1|grep '/var/lib/docker')" ]; then
+	if [ -n "$(findmnt -nr|sed -nr '/^\/var\/lib\/docker\s+/p')" ]; then
 		kill_docker_daemon
 		umount -l $dev /var/lib/docker
 	else
