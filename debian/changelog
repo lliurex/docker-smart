@@ -1,4 +1,11 @@
-lliurex-smart-ltsp (0.4.1) focal; urgency=medium
+lliurex-smart-ltsp (0.4.2) focal; urgency=medium
+
+  * Changes to deal with new kernel nbd & client methods
+  * Changed systemd service type to oneshoot
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Fri, 29 Oct 2021 10:28:23 +0200
+
+lliurex-smart-ltsp (0.4.1) UNRELEASED; urgency=medium
 
   * Focal build
 
