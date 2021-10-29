@@ -6,10 +6,11 @@ After=network-online.target firewalld.service
 Wants=multi-user.target
 
 [Service]
-Type=forking
+Type=oneshot
 ExecStart=/usr/sbin/nbd-lliurex-smart run-semi
 ExecStop=/usr/sbin/nbd-lliurex-smart end-semi
 ExecReload=/usr/sbin/nbd-lliurex-smart end-semi
+RemainAfterExit=yes
 #TimeoutSec=0
 #RestartSec=2
 #Restart=always
