@@ -1,3 +1,9 @@
+nwfermi-module (0.6.5.1-0+lliurex10) focal; urgency=medium
+
+  * Fix unmask unit if previously masked after de-installation
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Fri, 27 May 2022 09:39:46 +0200
+
 nwfermi-module (0.6.5.1-0+lliurex9) focal; urgency=medium
 
   * Fix build into chroot with distinct kernel
