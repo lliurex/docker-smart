@@ -60,14 +60,14 @@ case "$1" in
 		echo "Installing initial module"
 		dkms install -m nwfermi -v $PKGVER > /dev/null
 		echo "Done."
-		systemctl daemon-reload
+		systemctl daemon-reload || true
 		status=$(systemctl is-enabled nwfermi-module-host.service||true)
 		if [ "x$status" = "xmasked" ];then
-			systemctl unmask nwfermi-module-host.service
+			systemctl unmask nwfermi-module-host.service || true
 		fi
-		systemctl enable nwfermi-module-host.service
-		systemctl enable nwfermi@.service
-		/usr/sbin/nwfermi-trigger-udev-changes
+		systemctl enable nwfermi-module-host.service || true
+		systemctl enable nwfermi@.service || true
+		/usr/sbin/nwfermi-trigger-udev-changes || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

@@ -63,11 +63,11 @@ case "$1" in
 		systemctl daemon-reload
 		status=$(systemctl is-enabled nwfermi-module-host-pointer.service||true)
 		if [ "x$status" = "xmasked" ];then
-			systemctl unmask nwfermi-module-host-pointer.service
+			systemctl unmask nwfermi-module-host-pointer.service || true
 		fi
-		systemctl enable nwfermi-module-host-pointer.service
-		systemctl enable nwfermi@.service
-		/usr/sbin/nwfermi-trigger-udev-changes
+		systemctl enable nwfermi-module-host-pointer.service || true
+		systemctl enable nwfermi@.service || true
+		/usr/sbin/nwfermi-trigger-udev-changes || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
