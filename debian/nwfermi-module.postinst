@@ -63,14 +63,14 @@ case "$1" in
         	    dkms install -m nwfermi -v $PKGVER -k $k > /dev/null
 		done
 		echo "Done."
-                systemctl daemon-reload
-				status=$(systemctl is-enabled nwfermi-module.service||true)
-                if [ "x$status" = "xmasked" ];then
-                    systemctl unmask nwfermi-module.service
-                fi
-                systemctl enable nwfermi-module.service
-                systemctl enable nwfermi@.service
-                /usr/sbin/nwfermi-trigger-udev-changes
+		systemctl daemon-reload || true
+		status=$(systemctl is-enabled nwfermi-module.service||true)
+		if [ "x$status" = "xmasked" ];then
+			systemctl unmask nwfermi-module.service || true
+		fi
+		systemctl enable nwfermi-module.service || true
+		systemctl enable nwfermi@.service || true
+		/usr/sbin/nwfermi-trigger-udev-changes || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

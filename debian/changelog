@@ -1,3 +1,9 @@
+nwfermi-module (0.6.5.1-0+lliurex11) focal; urgency=medium
+
+  * Prevent systemctl calls lock installation
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Fri, 27 May 2022 10:31:12 +0200
+
 nwfermi-module (0.6.5.1-0+lliurex10) focal; urgency=medium
 
   * Fix unmask unit if previously masked after de-installation
