@@ -1,3 +1,9 @@
+nwfermi-module (0.6.5.1-0+lliurex10) bionic; urgency=medium
+
+  *  Unmask if is masked from previously de-installation
+
+ -- M.Angel Juan <m.angel.juan@gmail.com>  Fri, 27 May 2022 10:09:54 +0200
+
 nwfermi-module (0.6.5.1-0+lliurex9) bionic; urgency=medium
 
   * Fix chroot build with distinct kernel version than running

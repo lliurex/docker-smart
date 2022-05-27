@@ -48,7 +48,7 @@ case "$1" in
 			done
 			echo "Done."
 		fi
-		
+
 		echo "Removing all DKMS Modules"
 		dkms remove -m nwfermi -v $PKGVER --all -q > /dev/null || true
 		echo "Done."
@@ -60,10 +60,14 @@ case "$1" in
 		echo "Installing initial module"
 		dkms install -m nwfermi -v $PKGVER > /dev/null
 		echo "Done."
-                systemctl daemon-reload
-                systemctl enable nwfermi-module-host.service
-                systemctl enable nwfermi@.service
-                /usr/sbin/nwfermi-trigger-udev-changes
+		systemctl daemon-reload
+		status=$(systemctl is-enabled nwfermi-module-host.service||true)
+		if [ "x$status" = "xmasked" ];then
+			systemctl unmask nwfermi-module-host.service
+		fi
+		systemctl enable nwfermi-module-host.service
+		systemctl enable nwfermi@.service
+		/usr/sbin/nwfermi-trigger-udev-changes
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
