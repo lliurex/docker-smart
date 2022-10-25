@@ -269,26 +269,39 @@ def get_container():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
 
-	cmdline=['docker run']
+	cmdline=['docker','run']
 	cmdline.append('-d')
 	cmdline.append('--privileged')
-	cmdline.append('-v /tmp/.X11-unix:/tmp/.X11-unix')
-	cmdline.append('-v /dev:/dev')
+	cmdline.append('-v')
+	cmdline.append('/tmp/.X11-unix:/tmp/.X11-unix')
+	cmdline.append('-v')
+	cmdline.append('/dev:/dev')
 	uid,uname=check_running_user()
 	if storage_available():
-		cmdline.append('-v {}:/home/{}'.format(get_storage_path(),uname))
+		cmdline.append('-v')
+		cmdline.append('{}:/home/{}'.format(get_storage_path(),uname))
 	if config_storage_available():
-		cmdline.append('-v {}:/root/.config'.format(get_config_storage_path(),uname))
-	cmdline.append('-e DISPLAY={}'.format(get_display()))
+		cmdline.append('-v')
+		cmdline.append('{}:/root/.config'.format(get_config_storage_path(),uname))
+	cmdline.append('-e')
+	cmdline.append('DISPLAY={}'.format(get_display()))
 	gid,gname=check_running_group()
-	cmdline.append('-e USER={}'.format(uname))
-	cmdline.append('-e UID={}'.format(uid))
-	cmdline.append('-e GROUP={}'.format(gname))
-	cmdline.append('-e GID={}'.format(gid))
-	cmdline.append('--name {}'.format(get_container_name()))
-	
-	cmdline = ' '.join(cmdline)
-	cmdline += ' {}'.format(IMAGE_NAME)
+	# CDC group
+	# gname='Domain Users'
+	cmdline.append('-e')
+	cmdline.append('USER={}'.format(uname))
+	cmdline.append('-e')
+	cmdline.append('UID={}'.format(uid))
+	cmdline.append('-e')
+	cmdline.append('GROUP={}'.format(gname))
+	cmdline.append('-e')
+	cmdline.append('GID={}'.format(gid))
+	cmdline.append('--name')
+	cmdline.append('{}'.format(get_container_name()))
+
+	cmdline.append(IMAGE_NAME)
+	#cmdline = ' '.join(cmdline)
+	#cmdline += ' {}'.format(IMAGE_NAME)
 	logging.info('Creating new container from {}'.format(get_image_name()))
 	ret = execute(cmdline,False)
 	if ret != 0:
