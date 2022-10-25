@@ -40,7 +40,7 @@ def get_sudo_environment_group():
 		return check_running_group()
 	gid = int(os.environ.get('SUDO_GID'))
 	return gid,grp.getgrgid(gid).gr_name
-	
+
 def check_running_user():
 	if check_sudo_environment():
 		return get_sudo_environment_user()
@@ -60,10 +60,10 @@ def check_running_group():
 	if logging:
 	        logging.debug("Detected group '{}'".format(dgroup))
 	return dgroup
-	
+
 def configure_log():
 	global DEBUG, logging, current_uid, current_username
-	
+
 	current_uid,current_username = check_running_user()
 	if check_sudo_environment():
 		LOGFORMAT='lliurex-smart as (SUDO) [{}({})] %(threadName)s %(levelname)s %(message)s'.format(current_username,current_uid)
@@ -75,7 +75,7 @@ def configure_log():
 	else:
 		#_logging.basicConfig(level=_logging.WARNING,format=LOGFORMAT)
 		_logging.basicConfig(level=_logging.INFO,format=LOGFORMAT)
-		
+
 	logging = _logging.getLogger()
 	_syslog_handler = _handlers.SysLogHandler(address='/dev/log')
 	_syslog_handler.setFormatter(_logging.Formatter(fmt=LOGFORMAT))
@@ -113,7 +113,7 @@ def execute(cmd,stdout=True,shell=False,stderr=subprocess.DEVNULL,universal_newl
 		if not check_sudo_environment():
 			for pc in privileged_commands:
 				if pc in command[0]:
-					command.insert(0,'pkexec')			
+					command.insert(0,'pkexec')
 		logging.debug("Executing {}".format(command))
 		output = subprocess.check_output(command,shell=shell,stderr=stderr,universal_newlines=universal_newlines,env=custom_env)
 		retcode = 0
@@ -140,7 +140,7 @@ def get_image_name():
 
 def docker_installed():
 	global DOCKER_IS_INSTALLED
-	
+
 	installed = False
 	if not DOCKER_IS_INSTALLED:
 		installed = execute('docker -v',False)
@@ -151,7 +151,7 @@ def docker_installed():
 		DOCKER_IS_INSTALLED=True
 	else:
 		DOCKER_IS_INSTALLED=False
-	
+
 	#logging.debug("DOCKER_IS_INSTALLED={}".format(DOCKER_IS_INSTALLED))
 	return DOCKER_IS_INSTALLED
 
@@ -182,7 +182,7 @@ def remove_image():
 		return True
 	else:
 		raise SystemError("Error removing image")
-		
+
 def get_all_container_id():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
@@ -203,7 +203,7 @@ def get_all_container_id():
 		logging.warning("Error stripping '{}', error is: {}".format(out,e))
 		out = None
 	return out
-		
+
 def remove_all():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
@@ -262,13 +262,13 @@ def get_display():
 		d = ':0'
 		logging.warning("Unable to get display environment variable, falling back to '{}'".format(d))
 	return d
-	
+
 def get_container():
 	global current_username
-	
+
 	if not docker_installed():
 		raise OSError("Docker is not installed")
-		
+
 	cmdline=['docker run']
 	cmdline.append('-d')
 	cmdline.append('--privileged')
@@ -305,7 +305,7 @@ def run_container():
 		return False
 	else:
 		return True
-	
+
 def container_running():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
@@ -325,7 +325,7 @@ def container_running():
 			return False
 		else:
 			return True
-	
+
 def remove_container():
 	if not docker_installed():
 		raise OSError("Docker is not installed")
@@ -387,10 +387,10 @@ def get_threads_pool_position():
 	for i in [ x for x in range(0,MAX_THREAD_POOL) if THREAD_POOL[x] is None ]:
 		return i
 	return None
-	
+
 def get_thread_object(fn):
 	global THREAD_POOL, MAX_THREAD_POOL
-	
+
 	if get_threads_size() > MAX_THREAD_POOL:
 		logging.warning('Max threads reached, unable to allocate in pool')
 		return None
@@ -404,7 +404,7 @@ def get_thread_object(fn):
 		return t
 	return None
 
-	
+
 def join_all_threads():
 	global THREAD_POOL, MAX_THREAD_POOL
 	max_iter = 8
@@ -424,13 +424,13 @@ def join_all_threads():
 
 def create_timer(fn,timer):
 	global THREAD_POOL, MAX_THREAD_POOL
-	
+
 	timer = float(timer)
-	
+
 	if get_threads_size() > MAX_THREAD_POOL:
 		logging.warning('Max threads reached, unable to allocate in pool')
 		return None
-	
+
 	t = get_threads_pool_position()
 	namethread = '_timer_{}'.format(fn.__name__)
 	logging.debug("Creating timer on {} with name {}".format(t,namethread))
@@ -454,7 +454,7 @@ def get_x_permission():
 	if n==0:
 		logging.error('Max loop wait while getting x permission')
 	return False
-			
+
 def remove_x_permission():
 	n = 2
 	while n > 0:
@@ -466,7 +466,7 @@ def remove_x_permission():
 		n=n-1
 	if n==0:
 		logging.error('Max loop wait while removing x permission')
-	return False		
+	return False
 
 def nwfermi_available():
 	ret,lmodules = execute('lsmod')
@@ -497,7 +497,7 @@ def load_nwfermi():
 		logging.error("Can't load nw_fermi module, error is: {}".format(out.strip()))
 		return False
 	return True
-	
+
 def get_storage_path():
 	global MAIN_STORAGE_NAME
 	uid, name = check_running_user()
@@ -514,7 +514,7 @@ def get_config_storage_path():
 	config = '{}/{}'.format(configdir,CONFIG_STORAGE_NAME)
 	logging.debug("Using configuration --> {}".format(config))
 	return config
-	
+
 def permission_storage():
 	return os.R_OK|os.W_OK|os.X_OK
 
@@ -534,7 +534,7 @@ def config_storage_available():
 		return os.path.exists(folder) and os.access(folder,permission_config())
 	else:
 		logging.error("Couldn't detect path from config storage, detection has a result --> {}".format(folder))
-	
+
 def set_permission_dir(folder):
 	os.chmod(folder,0o0755)
 	return True
@@ -577,7 +577,7 @@ def clean_config_storage():
 			logging.error('Unknown error removing storage config at {}, {}'.format(folder,e))
 			return False
 	return None
-			
+
 
 def make_config_storage():
 	folder = get_config_storage_path()
@@ -600,7 +600,7 @@ def make_config_storage():
 
 def get_temp_dir_name():
 	return '/tmp/docker_tmp_{}'.format(get_container_name())
-	
+
 def make_temp_dir():
 	dirname = get_temp_dir_name()
 	if not os.path.exists(dirname):
@@ -638,7 +638,7 @@ def start_software():
 			if create_timer(check_logs,10) is None:
 				logging.warning("Couldn't create log watchdog timer")
 		return True
-		
+
 	except Exception as e:
 		import traceback
 		logging.debug(traceback.format_exc())
@@ -691,6 +691,6 @@ if __name__ == '__main__':
 		result = remove_all()
 	if args.clearconfig:
 		result = clean_config_storage()
-		
+
 	logging.info('Exitting with {}'.format(result))
-	
+
